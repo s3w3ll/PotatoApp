@@ -52,6 +52,7 @@ test("PUT oversized body -> 413", async () => {
     method: "PUT", headers: { "Content-Type": "application/json" }, body: big,
   });
   assert.equal(res.status, 413);
+  assert.equal(res.headers.get("access-control-allow-origin"), "https://tato.forgesync.co.nz");
 });
 
 test("PUT non-JSON -> 422", async () => {
@@ -59,6 +60,7 @@ test("PUT non-JSON -> 422", async () => {
     method: "PUT", headers: { "Content-Type": "application/json" }, body: "not json",
   });
   assert.equal(res.status, 422);
+  assert.equal(res.headers.get("access-control-allow-origin"), "https://tato.forgesync.co.nz");
 });
 
 test("PUT missing a required key -> 422", async () => {
@@ -67,6 +69,7 @@ test("PUT missing a required key -> 422", async () => {
     method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(bad),
   });
   assert.equal(res.status, 422);
+  assert.equal(res.headers.get("access-control-allow-origin"), "https://tato.forgesync.co.nz");
 });
 
 test("PUT version not a number -> 422", async () => {
@@ -75,10 +78,13 @@ test("PUT version not a number -> 422", async () => {
     method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(bad),
   });
   assert.equal(res.status, 422);
+  assert.equal(res.headers.get("access-control-allow-origin"), "https://tato.forgesync.co.nz");
 });
 
 test("bad code format -> 400", async () => {
-  assert.equal((await worker.fetch(`/world/not_a_code`)).status, 400);
+  const res = await worker.fetch(`/world/not_a_code`);
+  assert.equal(res.status, 400);
+  assert.equal(res.headers.get("access-control-allow-origin"), "https://tato.forgesync.co.nz");
 });
 
 test("OPTIONS -> 204 with all CORS headers", async () => {
@@ -90,5 +96,7 @@ test("OPTIONS -> 204 with all CORS headers", async () => {
 });
 
 test("unsupported method -> 405", async () => {
-  assert.equal((await worker.fetch(`/world/${CODE}`, { method: "POST" })).status, 405);
+  const res = await worker.fetch(`/world/${CODE}`, { method: "POST" });
+  assert.equal(res.status, 405);
+  assert.equal(res.headers.get("access-control-allow-origin"), "https://tato.forgesync.co.nz");
 });
