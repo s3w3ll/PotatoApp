@@ -38,3 +38,15 @@ button:disabled { opacity: .45; cursor: default; }
 @keyframes wiggle { 0%,100% { transform: rotate(-4deg) } 50% { transform: rotate(4deg) } }
 @keyframes chomp { 0%,100% { transform: scale(1) } 50% { transform: scale(.9) } }
 @keyframes snooze { 0%,100% { transform: scale(1); opacity: 1; } 50% { transform: scale(0.96); opacity: 0.75; } }
+.room {
+  display: grid; grid-template-columns: repeat(12, 1fr); gap: 2px;
+  background: #cd8c5c; padding: 6px; border-radius: 10px;
+}
+.room.theme-space   { background: #2a2350; }
+.room.theme-beach   { background: #e8d6a0; }
+.room.theme-bedroom { background: #b98cc0; }
+.cell {
+  aspect-ratio: 1; padding: 0; border-radius: 4px; border: 1px solid rgba(0,0,0,.15);
+  background: rgba(255,255,255,.35); display: grid; place-items: center; font-size: 12px;
+}
+.deco { font-weight: 700; }
