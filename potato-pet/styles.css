@@ -19,3 +19,20 @@ button:disabled { opacity: .45; cursor: default; }
   background: rgba(0,0,0,.55); color: #fff; text-align: center; padding: 24px;
 }
 #overlay[hidden] { display: none; }
+.stage { position: relative; height: 260px; display: grid; place-items: center; }
+.pet {
+  width: 120px; height: 120px; border-radius: 24px;
+  animation: bob 1.6s ease-in-out infinite;
+}
+.pet[data-mood="sleepy"] { animation-duration: 3s; opacity: .85; }
+.pet[data-mood="bored"]  { animation-name: wiggle; }
+.pet.anim-eat  { animation: chomp .4s steps(2) 3; }
+.pet.anim-peek { opacity: .5; }
+.speech {
+  position: absolute; top: 8px; max-width: 80%; background: #fff;
+  border: 2px solid #3b2f2f; border-radius: 12px; padding: 8px 12px; font-size: 14px;
+}
+.speech[hidden] { display: none; }
+@keyframes bob { 0%,100% { transform: translateY(0) } 50% { transform: translateY(-10px) } }
+@keyframes wiggle { 0%,100% { transform: rotate(-4deg) } 50% { transform: rotate(4deg) } }
+@keyframes chomp { 0%,100% { transform: scale(1) } 50% { transform: scale(.9) } }
