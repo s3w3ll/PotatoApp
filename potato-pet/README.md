@@ -7,7 +7,7 @@ A gentle browser virtual pet for a 10-year-old. Phase 1: fully local, no server.
 - **With auto-reload:** in VS Code, install the "Live Server" extension,
   right-click `index.html` → "Open with Live Server".
 
-## Run the logic tests
+## Run the logic tests 
 Open `tests.html`. All lines should say `ok`.
 
 ## Add content (no coding beyond editing lists)
