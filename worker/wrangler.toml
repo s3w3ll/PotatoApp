@@ -1,0 +1,10 @@
+name = "potato-pet-api"
+main = "src/index.js"
+compatibility_date = "2024-11-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "potato-pet"
+# Replaced with the real id during setup (see SETUP.md). A placeholder is
+# fine for local `wrangler dev` / `unstable_dev`, which use a local SQLite file.
+database_id = "00000000-0000-0000-0000-000000000000"
