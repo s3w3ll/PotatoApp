@@ -55,3 +55,6 @@ button:disabled { opacity: .45; cursor: default; }
 .preview { width: 140px; height: 140px; border-radius: 24px; margin: 12px 0; }
 .bigcode { font-size: 2rem; letter-spacing: .1em; font-weight: 800; }
 .err { color: #b00020; }
+.hud { display: flex; justify-content: space-between; align-items: center; font-size: 1.3rem; font-weight: 800; }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
+#panel { min-height: 80px; display: flex; flex-wrap: wrap; gap: 8px; }
