@@ -51,8 +51,8 @@ App.startscreen = (function () {
     }
   }
 
-  function startCreation(container, onReady) {
-    let code = randomCode();
+  function startCreation(container, onReady, seedCode) {
+    let code = seedCode || randomCode();
     function paint() {
       const preview = App.world.generateWorld(code);
       const col = (App.sprites.manifest[preview.pet.species] || {}).placeholderColor || "#999";
@@ -86,7 +86,18 @@ App.startscreen = (function () {
       }
       const world = App.world.generateWorld(code);
       world.pet.name = res.value;
-      await App.save.create(world);
+      const result = await App.save.create(world);
+      if (!result.ok && result.reason === "code-taken") {
+        const fresh = randomCode();
+        container.innerHTML =
+          '<h1>Almost!</h1>' +
+          '<p>That code was already taken — here\'s a new one.</p>' +
+          '<p><strong>' + fresh + '</strong></p>' +
+          '<p><button id="again">OK</button></p>';
+        container.querySelector("#again").addEventListener("click",
+          () => startCreation(container, onReady, fresh));
+        return;
+      }
       container.innerHTML =
         '<h1>All set!</h1><p>Your pet\'s code is:</p>' +
         '<p class="bigcode">' + code + '</p>' +
