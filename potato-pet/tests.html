@@ -1,0 +1,64 @@
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>Potato Pet — logic tests</title>
+<style>body{font:14px monospace;padding:1rem}.pass{color:#177245}.fail{color:#b00020}</style>
+</head>
+<body>
+<h1>Potato Pet — logic tests</h1>
+<pre id="out"></pre>
+
+<!-- load the same modules the app uses, in order -->
+<script src="js/config.js"></script>
+<script src="js/rng.js"></script>
+<script src="js/save.js"></script>
+<script src="js/world.js"></script>
+<script src="js/state.js"></script>
+<script src="js/content.js"></script>
+<script src="js/games.js"></script>
+<script src="js/facts.js"></script>
+<script src="js/interactions.js"></script>
+<script src="js/room.js"></script>
+<script src="js/backup.js"></script>
+
+<script>
+const TESTS = [];
+window.__pushTests = fn => TESTS.push(fn);
+let _results = [];
+function assert(name, cond) { _results.push([name, !!cond]); }
+function assertEq(name, actual, expected) {
+  assert(name + "  (got " + JSON.stringify(actual) + ")",
+         JSON.stringify(actual) === JSON.stringify(expected));
+}
+function assertThrows(name, fn, msgIncludes) {
+  try { fn(); assert(name + " — expected throw", false); }
+  catch (e) { assert(name, !msgIncludes || String(e.message).includes(msgIncludes)); }
+}
+async function assertThrowsAsync(name, fn, msgIncludes) {
+  try { await fn(); assert(name + " — expected throw", false); }
+  catch (e) { assert(name, !msgIncludes || String(e.message).includes(msgIncludes)); }
+}
+async function runTests() {
+  _results = [];
+  for (const t of TESTS) { try { await t(); } catch (e) { _results.push(["THREW: " + e.message, false]); } }
+  const out = document.getElementById("out");
+  const pass = _results.filter(r => r[1]).length;
+  out.textContent = _results.map(r => (r[1] ? "  ok  " : " FAIL ") + r[0]).join("\n")
+    + "\n\n" + pass + " / " + _results.length + " passed";
+  out.className = pass === _results.length ? "pass" : "fail";
+}
+window.addEventListener("load", runTests);
+</script>
+
+<script src="js/rng.tests.js"></script>
+<script src="js/save.tests.js"></script>
+<script src="js/world.tests.js"></script>
+<script src="js/state.tests.js"></script>
+<script src="js/content.tests.js"></script>
+<script src="js/games.tests.js"></script>
+<script src="js/facts.tests.js"></script>
+<script src="js/interactions.tests.js"></script>
+<script src="js/room.tests.js"></script>
+<script src="js/backup.tests.js"></script>
+<script>runTests();</script>
+</body>
+</html>

@@ -1,0 +1,3 @@
+Phase 1 uses coloured placeholder blocks, no third-party art.
+Phase 3 will list each sprite sheet and its CC0 source pack here
+(Kenney.nl / itch.io CC0), one line per file.
