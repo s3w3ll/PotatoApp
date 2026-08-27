@@ -53,7 +53,7 @@ function load(file) {
 
 // module block — keep in sync with tests.html
 [
-  'config.js', 'rng.js', 'remote.js', 'save.js', 'world.js', 'state.js',
+  'config.js', 'remote.js', 'rng.js', 'save.js', 'world.js', 'state.js',
   'content.js', 'games.js', 'facts.js', 'interactions.js', 'room.js', 'backup.js',
 ].forEach(load);
 
