@@ -87,7 +87,7 @@ App.save = (function () {
       const adopted = server.data;
       adopted.savedAt = server.updatedAt; // normalize so next compare is a tie
       writeLocalRaw(adopted);
-      lastPushedSerial[code] = JSON.stringify(adopted);
+      lastPushedSerial[code] = serial(adopted);
       clearDirty(code);
       return adopted;
     }
@@ -119,11 +119,66 @@ App.save = (function () {
     writeIndex(readIndex().filter(e => e.code !== code));
   }
 
-  // ---- push scheduling: minimal here, completed in Task 4 ----
+  // ---- push scheduling ----
+  const PUSH_INTERVAL_MS = 30000;
+  let hideHooked = false;
+
+  function serial(world) { return JSON.stringify(Object.assign({}, world, { savedAt: 0 })); }
+
   function schedulePush(world) {
+    if (lastPushedSerial[world.code] === serial(world)) return;
     markDirty(world.code);
+    hookHide();
+    if (!pushTimer) {
+      pushTimer = setTimeout(function () { pushTimer = null; doPush(); }, PUSH_INTERVAL_MS);
+    }
   }
-  async function flushPush() { /* Task 4 */ }
+
+  function hookHide() {
+    if (hideHooked || typeof document === "undefined") return;
+    hideHooked = true;
+    const flush = function () { doPush(); };
+    document.addEventListener("visibilitychange", function () {
+      if (document.hidden) flush();
+    });
+    if (typeof window !== "undefined") window.addEventListener("pagehide", flush);
+  }
+
+  async function doPush() {
+    if (!App.remote || !App.remote.available()) return;
+    const codes = Array.from(pendingSet);
+    for (const code of codes) {
+      const local = safeReadLocal(code);
+      if (!local) { clearDirty(code); continue; }
+      let result;
+      try {
+        result = await App.remote.putWorld(code, local);
+      } catch (err) {
+        if (err && err.kind === "http" && err.status !== 429 && err.status < 500) {
+          console.error("potato-pet sync: push rejected", err.status, err);
+          clearDirty(code);
+        } else if (err && err.kind === "bad-response") {
+          console.error("potato-pet sync: bad push response", err);
+          clearDirty(code);
+        } // offline / timeout / 429 / 5xx: leave dirty, retry later
+        continue;
+      }
+      local.savedAt = result.updatedAt;
+      writeLocalRaw(local);
+      lastPushedSerial[code] = serial(local);
+      clearDirty(code);
+    }
+  }
+
+  function safeReadLocal(code) {
+    try { return readLocal(code); } catch (_) { return null; }
+  }
+
+  async function flushPush() {
+    if (pushTimer) { clearTimeout(pushTimer); pushTimer = null; }
+    await doPush();
+  }
+
   function resetSync() {
     if (pushTimer) { clearTimeout(pushTimer); pushTimer = null; }
     pendingSet = new Set();
@@ -141,5 +196,6 @@ App.save = (function () {
     _pending: () => Array.from(pendingSet),
     _resetSync: resetSync,
     _flushPush: flushPush,
+    _PUSH_INTERVAL_MS: PUSH_INTERVAL_MS,
   });
 })();

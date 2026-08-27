@@ -122,3 +122,71 @@ window.__pushTests(async function saveSyncLoadTests() {
   await App.save.remove(CODE);
   localStorage.removeItem("potato-pet:backup:" + CODE);
 });
+
+window.__pushTests(async function saveSyncPushTests() {
+  const CODE = "PSH-001";
+  const realRemote = App.remote;
+  const base = () => ({
+    version: App.save.CURRENT_VERSION, code: CODE, savedAt: 0,
+    pet: { species: "frog", name: "P", adoptedAt: 1, tint: 0,
+           needs: { hunger: 50, energy: 50, fun: 50 }, lastTick: 1 },
+    stars: 0, room: { theme: "meadow", owned: [], placed: [] },
+    learn: { factsSeen: [], game: { mathLevel: 1, spellingLevel: 1, bestStreak: 0 } },
+  });
+  const fake = (over) => Object.assign({
+    available: () => true,
+    getWorld: async () => null,
+    putWorld: async () => ({ updatedAt: 777 }),
+    probe: async () => false,
+    RemoteError: realRemote.RemoteError,
+  }, over);
+
+  // debounce: N rapid sets -> at most one putWorld
+  App.save._resetSync();
+  await App.save.remove(CODE);
+  let puts = [];
+  App.remote = fake({ putWorld: async (c, w) => { puts.push(JSON.parse(JSON.stringify(w))); return { updatedAt: 777 }; } });
+  const w = base();
+  await App.save.set(w); w.stars = 1;
+  await App.save.set(w); w.stars = 2;
+  await App.save.set(w);
+  await App.save._flushPush();
+  assertEq("debounce collapses to one push", puts.length, 1);
+  assertEq("push sends the latest world", puts[0].stars, 2);
+  assert("push clears pending", App.save._pending().indexOf(CODE) === -1);
+  assertEq("push normalizes savedAt to server updatedAt",
+    JSON.parse(localStorage.getItem("potato-pet:world:" + CODE)).savedAt, 777);
+
+  // unchanged world -> zero pushes
+  App.save._resetSync();
+  puts = [];
+  await App.save.set(w);            // stars still 2, but _resetSync cleared lastPushedSerial
+  await App.save._flushPush();      // this one pushes (serial unknown after reset)
+  puts = [];
+  await App.save.set(w);            // identical world now
+  await App.save._flushPush();
+  assertEq("identical world -> no push", puts.length, 0);
+
+  // 5xx -> stays dirty
+  App.save._resetSync();
+  await App.save.remove(CODE);
+  App.remote = fake({ putWorld: async () => { throw realRemote.RemoteError("http", 503); } });
+  await App.save.set(base());
+  await App.save._flushPush();
+  assert("5xx keeps code pending", App.save._pending().indexOf(CODE) !== -1);
+
+  // 422 -> logged + dirty cleared
+  App.save._resetSync();
+  await App.save.remove(CODE);
+  let errs = 0; const origErr = console.error; console.error = () => { errs++; };
+  App.remote = fake({ putWorld: async () => { throw realRemote.RemoteError("http", 422); } });
+  await App.save.set(base());
+  await App.save._flushPush();
+  console.error = origErr;
+  assert("422 was logged", errs > 0);
+  assert("422 clears pending (no doomed retry)", App.save._pending().indexOf(CODE) === -1);
+
+  App.remote = realRemote;
+  App.save._resetSync();
+  await App.save.remove(CODE);
+});
