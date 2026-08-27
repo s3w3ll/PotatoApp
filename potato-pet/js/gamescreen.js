@@ -71,12 +71,23 @@ App.gamescreen = (function () {
       const owned = world.room.owned.includes(c.id);
       return '<button data-buy="' + c.id + '"' + (owned || !App.room.canBuy(world, c.id) ? ' disabled' : '') +
         '>' + c.label + (owned ? ' ✓' : ' — ★' + c.price) + '</button>';
-    }).join("") + '<div id="roomwrap"></div><p><button id="placemode">Place items</button></p>';
+    }).join("") + '<div id="roomwrap"></div><p><button id="placemode">Place items</button></p>' +
+      '<p><button id="backupbtn">Backup</button> <button id="restorebtn">Restore</button></p>';
     App.room.renderRoom(document.getElementById("roomwrap"), world, {});
     panel.querySelectorAll("[data-buy]").forEach(b => b.addEventListener("click", () => {
       if (App.room.buy(world, b.dataset.buy).ok) { persist(); refresh(); renderShop(panel); }
     }));
     panel.querySelector("#placemode").addEventListener("click", () => enterPlaceMode(panel));
+    panel.querySelector("#backupbtn").addEventListener("click", () =>
+      window.prompt("Copy this and keep it safe:", App.backup.exportString(world)));
+    panel.querySelector("#restorebtn").addEventListener("click", async () => {
+      const text = window.prompt("Paste your backup string:");
+      if (!text) return;
+      const res = App.backup.importString(text);
+      if (!res.ok) { alert("That backup didn't look right."); return; }
+      await App.save.set(res.world);
+      location.reload();
+    });
   }
 
   function enterPlaceMode(panel) {
