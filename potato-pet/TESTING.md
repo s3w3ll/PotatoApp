@@ -43,3 +43,15 @@ should read `N / N passed`. Re-run after ANY change to a `js/*.js` file.
    next load.
 6. Make a new pet while offline — it should still work (the code is not
    checked); it syncs on the next load.
+
+## Phase 3 — pixel-art sprites (visual)
+
+1. Adopt a pet: it shows an animated pixel sprite, not a flat block. The idle bob is frame-stepped.
+2. Feed it -> the eat frames play, then it returns to idle. Put it to bed -> the sleep frames + dimming. Hide-and-seek -> the pet dims while hidden.
+3. Enter the same species with two different codes -> the two pets use different palette variants.
+4. Decorate: each shop button shows the item's sprite icon; buying + placing an item shows that sprite in the grid cell.
+5. Each of the four room themes (meadow / bedroom / space / beach) shows a tiled floor and a wall band.
+6. Break an asset to check the fallbacks (restore the file afterwards):
+   - rename `assets/sprites/pet/<species>-0.png` -> that pet shows the old coloured block, one console warning, no error screen
+   - rename a `assets/sprites/deco/<id>.png` -> that decoration shows its first letter
+   - rename a `assets/sprites/room/floor-<theme>.png` -> that theme shows the flat background colour

@@ -30,9 +30,18 @@ Decoration items are the `CATALOG` array in `js/room.js`.
 Open `index.html?dev` for a panel: skip time, add stars, force a mood,
 corrupt/reset the save, show the backup string.
 
+## Regenerate the art
+The sprites in `assets/sprites/` are generated, not hand-drawn files.
+Edit the pixel grids in `tools/gen-art.mjs`, then:
+  cd tools && npm run gen
+Output is deterministic — re-running with no edits changes nothing.
+`node gen-art.mjs --preview` prints ASCII of every sprite without writing.
+
 ## Cloud sync (optional)
 Off by default. To turn it on, follow `../worker/SETUP.md` and set
 `apiBase` in `js/config.js`. With it off, the game is 100% local.
 
 ## What's next
-- Phase 3: real CC0 pixel-art sprites in place of the coloured blocks.
+- Phase 3 shipped generated pixel-art sprites for the pet, room, and
+  decorations (see "Regenerate the art"). Every sprite still degrades to
+  the old coloured-block / first-letter visual if an asset is missing.
