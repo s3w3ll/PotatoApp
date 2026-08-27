@@ -9,6 +9,8 @@ import { crc32, encodePNG, PNG_SIG } from "./gen-art.mjs";
 const HERE = new URL(".", import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, "$1");
 const OUT = new URL("../potato-pet/assets/sprites/", import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, "$1");
 const SPECIES = "strawberry broccoli turtle cat frog donut carrot penguin".split(" ");
+const THEMES = "meadow bedroom space beach".split(" ");
+const DECO = "rug lamp plant poster beanbag bookshelf window ball blocks clock table cushion".split(" ");
 const gen = (...args) => execFileSync("node", ["gen-art.mjs", ...args], { cwd: HERE });
 
 function readPng(p) { return fs.readFileSync(p); }
@@ -95,14 +97,57 @@ test("gen-art writes all 32 pet sheets, 64x128, valid PNG", () => {
   }
 });
 
+test("gen-art writes room tiles + deco sprites, 32x32, valid PNG", () => {
+  gen();
+  for (const t of THEMES) for (const kind of ["floor", "wall"]) {
+    const p = path.join(OUT, "room", `${kind}-${t}.png`);
+    assert.ok(fs.existsSync(p), `missing ${kind}-${t}`);
+    const b = readPng(p);
+    assert.ok(isValidPNG(b), `invalid PNG ${kind}-${t}`);
+    assert.deepEqual(dims(b), [32, 32], `${kind}-${t} dims`);
+  }
+  for (const id of DECO) {
+    const p = path.join(OUT, "deco", `${id}.png`);
+    assert.ok(fs.existsSync(p), `missing deco ${id}`);
+    const b = readPng(p);
+    assert.ok(isValidPNG(b), `invalid PNG deco ${id}`);
+    assert.deepEqual(dims(b), [32, 32], `deco ${id} dims`);
+  }
+});
+
+test("floor tiles tile seamlessly (left edge == right edge, top == bottom)", () => {
+  gen();
+  for (const t of THEMES) {
+    const { w, px } = idatIndices(readPng(path.join(OUT, "room", `floor-${t}.png`)));
+    const at = (x, y) => px[y * w + x];
+    for (let y = 0; y < 32; y++) assert.equal(at(0, y), at(31, y), `${t} row ${y} L/R`);
+    for (let x = 0; x < 32; x++) assert.equal(at(x, 0), at(x, 31), `${t} col ${x} T/B`);
+  }
+});
+
+test("deco sprites have a transparent margin and a solid object", () => {
+  gen();
+  for (const id of DECO) {
+    const { px } = idatIndices(readPng(path.join(OUT, "deco", `${id}.png`)));
+    const solid = px.reduce((n, v) => n + (v ? 1 : 0), 0);
+    assert.ok(solid > 30, `${id} nearly empty (${solid}/${px.length})`);
+    assert.ok(solid < px.length * 0.85, `${id} no transparent margin (${solid}/${px.length})`);
+  }
+});
+
 test("gen-art is deterministic (two runs, identical bytes)", () => {
-  const cap = () => SPECIES.flatMap(s => [0, 1, 2, 3].map(v =>
-    fs.readFileSync(path.join(OUT, "pet", `${s}-${v}.png`))));
+  const cap = () => [
+    ...SPECIES.flatMap(s => [0, 1, 2, 3].map(v =>
+      fs.readFileSync(path.join(OUT, "pet", `${s}-${v}.png`)))),
+    ...THEMES.flatMap(t => ["floor", "wall"].map(k =>
+      fs.readFileSync(path.join(OUT, "room", `${k}-${t}.png`)))),
+    ...DECO.map(id => fs.readFileSync(path.join(OUT, "deco", `${id}.png`))),
+  ];
   gen();
   const a = cap();
   gen();
   const b = cap();
-  a.forEach((buf, i) => assert.ok(buf.equals(b[i]), "pet file " + i + " changed between runs"));
+  a.forEach((buf, i) => assert.ok(buf.equals(b[i]), "file " + i + " changed between runs"));
 });
 
 test("each species has at least one variant differing from variant 0", () => {

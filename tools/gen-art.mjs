@@ -257,6 +257,24 @@ function packSheet(rowsOfFrames, keyToHex) {
   return { width: W, height: H, palette, indices };
 }
 
+// A single 32x32 image (room tile or decoration). Index 0 stays transparent
+// even for opaque tiles (no pixel uses it) so every PNG carries a tRNS chunk.
+function packCell(grid, keyToHex) {
+  const cells = g2d(grid);
+  const palette = ["#000000"];
+  const index = new Map([["#000000", 0]]);
+  const idxOf = hex => {
+    if (!index.has(hex)) { index.set(hex, palette.length); palette.push(hex); }
+    return index.get(hex);
+  };
+  const indices = new Uint8Array(32 * 32);
+  for (let y = 0; y < 32; y++) for (let x = 0; x < 32; x++) {
+    const key = cells[y][x];
+    indices[y * 32 + x] = key === "." ? 0 : idxOf(keyToHex[key]);
+  }
+  return { width: 32, height: 32, palette, indices };
+}
+
 // ===================================================================
 // Art data
 // ===================================================================
@@ -412,6 +430,303 @@ const SPECIES_ART = {
 };
 
 // ===================================================================
+// Room themes + decorations
+// ===================================================================
+
+const THEMES = "meadow bedroom space beach".split(" ");
+const DECO = "rug lamp plant poster beanbag bookshelf window ball blocks clock table cushion".split(" ");
+
+// Build a 32x32 tile from a per-pixel fn, then force column 31 == column 0
+// and row 31 == row 0 so the tile repeats without a visible seam (and the
+// generator's seam test passes by construction). fn must return a real key
+// for every pixel — tiles are opaque.
+function tileRows(fn) {
+  const g = [];
+  for (let y = 0; y < 32; y++) {
+    const r = [];
+    for (let x = 0; x < 32; x++) r.push(fn(x, y));
+    g.push(r);
+  }
+  for (let y = 0; y < 32; y++) g[y][31] = g[y][0];
+  for (let x = 0; x < 32; x++) g[31][x] = g[0][x];
+  return g.map(r => r.join(""));
+}
+
+const inRect = (x, y, x0, y0, x1, y1) => x >= x0 && x <= x1 && y >= y0 && y <= y1;
+
+const THEME_ART = {
+  meadow: {
+    floor: {
+      palette: { g: "#6bbf59", d: "#4f9d43", l: "#8fd47c" },
+      pixels: tileRows((x, y) =>
+        ((x * 3 + y) % 8 === 5 && y % 4 === 3) ? "l" :
+        ((x + y * 2) % 8 === 3 && y % 4 === 1) ? "d" : "g"),
+    },
+    wall: {
+      palette: { s: "#bfe3f5", g: "#6bbf59", d: "#4f9d43", c: "#ffffff" },
+      pixels: tileRows((x, y) => {
+        const hy = 20 + Math.round(2 * Math.sin(x / 32 * 2 * Math.PI));
+        if (inRect(x, y, 4, 4, 9, 6) || inRect(x, y, 19, 9, 25, 11)) return "c";
+        if (y < hy) return "s";
+        return y === hy ? "d" : "g";
+      }),
+    },
+  },
+  bedroom: {
+    floor: {
+      palette: { a: "#caa06f", b: "#bd8f5f", K: "#9c6b46" },
+      pixels: tileRows((x, y) =>
+        (x % 8 === 2 && y % 8 === 2) ? "K" :
+        (((x >> 2) + (y >> 2)) % 2 ? "a" : "b")),
+    },
+    wall: {
+      palette: { a: "#d9b3d6", b: "#c99cc6", c: "#efe0ee" },
+      pixels: tileRows((x) => x % 8 === 0 ? "c" : (x % 8 < 4 ? "a" : "b")),
+    },
+  },
+  space: {
+    floor: {
+      palette: { d: "#2a2350", m: "#37306a", K: "#1b1636" },
+      pixels: tileRows((x, y) =>
+        (x % 8 === 0 || y % 8 === 0) ? "K" :
+        (x % 8 === 4 && y % 8 === 4) ? "m" : "d"),
+    },
+    wall: {
+      palette: { d: "#171233", s: "#ffffff", b: "#8f9bd6" },
+      pixels: tileRows((x, y) => {
+        const stars = [[3, 4], [11, 9], [18, 3], [24, 14], [7, 20], [28, 8], [15, 25]];
+        const dim = [[9, 15], [21, 21], [5, 11], [26, 27]];
+        if (stars.some(([sx, sy]) => sx === x && sy === y)) return "s";
+        if (dim.some(([sx, sy]) => sx === x && sy === y)) return "b";
+        return "d";
+      }),
+    },
+  },
+  beach: {
+    floor: {
+      palette: { s: "#ecd9a8", d: "#dcc48c", l: "#f5e8c4" },
+      pixels: tileRows((x, y) => {
+        const m = (y + (x >> 3)) % 6;
+        return m === 0 ? "d" : m === 3 ? "l" : "s";
+      }),
+    },
+    wall: {
+      palette: { s: "#bfe3f5", w: "#4bb0c9", f: "#ffffff" },
+      pixels: tileRows((x, y) => {
+        if (y === 15 && x % 6 === 2) return "f";
+        return y < 14 ? "s" : y === 14 ? "f" : "w";
+      }),
+    },
+  },
+};
+
+// Decorations: authored ~16 wide, scaled x2 and centred into 32x32 with a
+// transparent background (".").
+const DECO_ART = {
+  rug: {
+    palette: { f: "#e2c37a", r: "#c56b6b", R: "#a94c4c" },
+    pixels: [
+      "................",
+      "................",
+      "................",
+      "....ffffffff....",
+      "..ffrrrrrrrrff..",
+      ".frrRRRRRRRRrrf.",
+      ".frRRRRRRRRRRRf.",
+      ".frrRRRRRRRRrrf.",
+      "..ffrrrrrrrrff..",
+      "....ffffffff....",
+      "................",
+      "................",
+      "................",
+    ],
+  },
+  lamp: {
+    palette: { g: "#fff0c2", G: "#ffd25e", s: "#8a6b4a", K: "#5a4632" },
+    pixels: [
+      ".....gggg.......",
+      "....gGGGGg......",
+      "...gGGGGGGg.....",
+      "...gGGGGGGg.....",
+      "....gGGGGg......",
+      ".....gGGg.......",
+      "......ss........",
+      "......ss........",
+      "......ss........",
+      "......ss........",
+      "......ss........",
+      "....KKKKKK......",
+      "...KKKKKKKK.....",
+      "................",
+    ],
+  },
+  plant: {
+    palette: { g: "#3fae5a", G: "#6bd47c", p: "#c56b3a", P: "#a9512a" },
+    pixels: [
+      "......gg........",
+      "....g.gg.g......",
+      "...g.gGg.g.g....",
+      "...gg.gg.gg.....",
+      "..g.ggGggg.g....",
+      "...g.gGg.g......",
+      "....ggggg.......",
+      ".....ppp........",
+      ".....ppp........",
+      "....pPPPp.......",
+      "....pPPPp.......",
+      "....pppppp......",
+      ".....pppp.......",
+      "................",
+    ],
+  },
+  poster: {
+    palette: { K: "#5a4632", w: "#eef2f5", s: "#4b8fc9" },
+    pixels: [
+      "................",
+      "..KKKKKKKKKKKK..",
+      "..KwwwwwwwwwwK..",
+      "..KwwwsswwwwwK..",
+      "..KwwssssswwwK..",
+      "..KwssssssssswK.",
+      "..KwwwsssswwwwK.",
+      "..KwwwwsswwwwwK.",
+      "..KwwwwwwwwwwK..",
+      "..KKKKKKKKKKKK..",
+      "................",
+    ],
+  },
+  beanbag: {
+    palette: { b: "#7a9cc9", B: "#5f82b0" },
+    pixels: [
+      "................",
+      "................",
+      ".....bbbbb......",
+      "...bbBBBBBbb....",
+      "..bBBBBBBBBBb...",
+      "..bBBBBBBBBBb...",
+      ".bBBBBBBBBBBBb..",
+      ".bBBBBBBBBBBBb..",
+      "..bBBBBBBBBBb...",
+      "..bbBBBBBBBbb...",
+      "...bbbbbbbbb....",
+      "................",
+    ],
+  },
+  bookshelf: {
+    palette: { K: "#5a4632", r: "#c56b6b", g: "#5fae6b", b: "#5f82b0", y: "#e0c56b" },
+    pixels: [
+      "..KKKKKKKKKKKK..",
+      "..KrgbyrgbyrgK..",
+      "..KrgbyrgbyrgK..",
+      "..KKKKKKKKKKKK..",
+      "..KbyrgbyrgbyK..",
+      "..KbyrgbyrgbyK..",
+      "..KKKKKKKKKKKK..",
+      "..KgrbygrbygrK..",
+      "..KgrbygrbygrK..",
+      "..KKKKKKKKKKKK..",
+      "................",
+    ],
+  },
+  window: {
+    palette: { K: "#5a4632", s: "#bfe3f5", c: "#ffffff" },
+    pixels: [
+      "..KKKKKKKKKKKK..",
+      "..KssssKsssssK..",
+      "..KsccsKsssssK..",
+      "..KssssKsssssK..",
+      "..KssssKsssssK..",
+      "..KKKKKKKKKKKK..",
+      "..KssssKsssssK..",
+      "..KssssKssccsK..",
+      "..KssssKsssssK..",
+      "..KssssKsssssK..",
+      "..KKKKKKKKKKKK..",
+      "................",
+    ],
+  },
+  ball: {
+    palette: { r: "#e05a5a", w: "#ffffff" },
+    pixels: [
+      "................",
+      ".....rrrrr......",
+      "...rrrrrrrrr....",
+      "..rrwwrrrrrrr...",
+      "..rwwrrrrrrrr...",
+      ".rrrrrrrrrrrrr..",
+      ".rrrrrrrrrrrrr..",
+      ".rrrrrrrrrrrrr..",
+      "..rrrrrrrrrrr...",
+      "...rrrrrrrrr....",
+      ".....rrrrr......",
+      "................",
+    ],
+  },
+  blocks: {
+    palette: { b: "#5f82b0", B: "#7a9cc9", g: "#5fae6b", G: "#7cc98a", r: "#e0a05a", R: "#f0bd7a" },
+    pixels: [
+      "................",
+      "......bbbb......",
+      "......bBBb......",
+      "......bbbb......",
+      "..gggg.rrrr.....",
+      "..gGGg.rRRr.....",
+      "..gGGg.rRRr.....",
+      "..gggg.rrrr.....",
+      "................",
+    ],
+  },
+  clock: {
+    palette: { K: "#3a3a3a", w: "#f2efe4" },
+    pixels: [
+      "................",
+      ".....KKKKK......",
+      "...KKwwwwwKK....",
+      "..KwwwwKwwwwK...",
+      "..KwwwwKwwwwK...",
+      ".KwwwwwKwwwwwK..",
+      ".KwwwwwKKKKwwK..",
+      ".KwwwwwwwwwwwK..",
+      "..KwwwwwwwwwK...",
+      "...KKwwwwwKK....",
+      ".....KKKKK......",
+      "................",
+    ],
+  },
+  table: {
+    palette: { K: "#8a5a34", t: "#a9744a" },
+    pixels: [
+      "................",
+      ".. tttttttttt ..",
+      "..KKKKKKKKKKKK..",
+      "..KKKKKKKKKKKK..",
+      "...K........K...",
+      "...K........K...",
+      "...K........K...",
+      "...K........K...",
+      "...K........K...",
+      "................",
+    ],
+  },
+  cushion: {
+    palette: { b: "#c98f6f", B: "#d9a888", y: "#ffe08a" },
+    pixels: [
+      "................",
+      "...bbbbbbbbbb...",
+      "..bBBBBBBBBBBb..",
+      "..bBBBByBBBBBb..",
+      "..bBBByyyBBBBb..",
+      "..bByyyyyyyBBb..",
+      "..bBBByyyBBBBb..",
+      "..bBBBByBBBBBb..",
+      "..bBBBBBBBBBBb..",
+      "...bbbbbbbbbb...",
+      "................",
+    ],
+  },
+};
+
+// ===================================================================
 // Generation
 // ===================================================================
 
@@ -459,12 +774,40 @@ function genPets({ preview }) {
   }
 }
 
+function buildTile(art) {
+  return packCell(parseGrid(art), art.palette);
+}
+
+function buildDeco(art) {
+  return packCell(pad(scale2x(parseGrid(art)), 32, 32), art.palette);
+}
+
+function genRooms({ preview }) {
+  if (!preview) {
+    fs.mkdirSync(new URL("room/", SPRITE_DIR), { recursive: true });
+    fs.mkdirSync(new URL("deco/", SPRITE_DIR), { recursive: true });
+  }
+  for (const t of THEMES) {
+    for (const kind of ["floor", "wall"]) {
+      const art = THEME_ART[t][kind];
+      if (preview) { previewGrid(t + " " + kind, parseGrid(art)); continue; }
+      fs.writeFileSync(new URL("room/" + kind + "-" + t + ".png", SPRITE_DIR), encodePNG(buildTile(art)));
+    }
+  }
+  for (const id of DECO) {
+    const art = DECO_ART[id];
+    if (preview) { previewGrid("deco " + id, pad(scale2x(parseGrid(art)), 32, 32)); continue; }
+    fs.writeFileSync(new URL("deco/" + id + ".png", SPRITE_DIR), encodePNG(buildDeco(art)));
+  }
+}
+
 function main() {
   const preview = process.argv.includes("--preview");
   genPets({ preview });
+  genRooms({ preview });
   if (!preview) {
     fs.writeFileSync(new URL("LICENSE.txt", SPRITE_DIR), LICENSE_TEXT);
-    console.log("gen-art: wrote pet sheets + LICENSE.txt");
+    console.log("gen-art: wrote pet + room + deco sprites + LICENSE.txt");
   }
 }
 
