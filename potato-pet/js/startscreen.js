@@ -71,14 +71,32 @@ App.startscreen = (function () {
     let code = seedCode || randomCode();
     function paint() {
       const preview = App.world.generateWorld(code);
-      const col = (App.sprites.manifest[preview.pet.species] || {}).placeholderColor || "#999";
+      const m = App.sprites.manifest[preview.pet.species] || {};
+      const S = 3;
+      const bg = m.sheet
+        ? 'background-image:url(' + m.sheet(App.sprites.variantFor(preview.pet.tint)) +
+          ');background-size:' + (m.cols * m.cell * S) + 'px ' + (m.rows * m.cell * S) +
+          'px;background-position:0 0'
+        : 'background:' + (m.placeholderColor || "#999") + ';filter:hue-rotate(' + (preview.pet.tint || 0) + 'deg)';
       container.innerHTML =
         '<h1>Meet your new pet!</h1>' +
-        '<div class="preview pixel" style="background:' + col +
-          ';filter:hue-rotate(' + preview.pet.tint + 'deg)"></div>' +
+        '<div class="preview pixel" id="pvpet" style="' + bg + '"></div>' +
         '<p>' + preview.pet.species + ' in a ' + preview.room.theme + ' room</p>' +
         '<p><strong>' + code + '</strong></p>' +
         '<p><button id="reroll">Reroll</button> <button id="keep">Keep this one</button></p>';
+      if (m.sheet) {
+        const probe = new Image();
+        probe.onerror = () => {
+          const d = container.querySelector("#pvpet");
+          if (d) {
+            d.classList.add("fallback");
+            d.style.backgroundImage = "none";
+            d.style.background = (m.placeholderColor || "#999");
+            d.style.filter = "hue-rotate(" + (preview.pet.tint || 0) + "deg)";
+          }
+        };
+        probe.src = m.sheet(App.sprites.variantFor(preview.pet.tint));
+      }
       container.querySelector("#reroll").addEventListener("click", () => { code = randomCode(); paint(); });
       container.querySelector("#keep").addEventListener("click", () => nameStep(container, code, onReady));
     }
