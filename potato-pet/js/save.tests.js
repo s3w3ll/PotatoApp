@@ -190,3 +190,59 @@ window.__pushTests(async function saveSyncPushTests() {
   App.save._resetSync();
   await App.save.remove(CODE);
 });
+
+window.__pushTests(async function saveCheckCodeTests() {
+  const realRemote = App.remote;
+  const CODE = "CHK-001";
+  const world = {
+    version: App.save.CURRENT_VERSION, code: CODE, savedAt: 0,
+    pet: { species: "donut", name: "C", adoptedAt: 1, tint: 0,
+           needs: { hunger: 50, energy: 50, fun: 50 }, lastTick: 1 },
+    stars: 0, room: { theme: "meadow", owned: [], placed: [] },
+    learn: { factsSeen: [], game: { mathLevel: 1, spellingLevel: 1, bestStreak: 0 } },
+  };
+  const fake = (over) => Object.assign({
+    available: () => true, getWorld: async () => null,
+    putWorld: async () => ({ updatedAt: 1 }), probe: async () => false,
+    RemoteError: realRemote.RemoteError,
+  }, over);
+
+  App.save._resetSync();
+  await App.save.remove(CODE);
+
+  App.remote = fake({ available: () => false });
+  assertEq("checkCode unknown when unavailable", await App.save.checkCode(CODE), "unknown");
+
+  App.remote = fake({ probe: async () => false });
+  assertEq("checkCode free when probe false", await App.save.checkCode(CODE), "free");
+
+  App.remote = fake({ probe: async () => true });
+  assertEq("checkCode taken when probe true", await App.save.checkCode(CODE), "taken");
+
+  App.remote = fake({ probe: async () => { throw realRemote.RemoteError("timeout"); } });
+  assertEq("checkCode unknown when probe throws", await App.save.checkCode(CODE), "unknown");
+
+  // create: taken -> {ok:false}, nothing written
+  App.remote = fake({ probe: async () => true });
+  const r1 = await App.save.create(world);
+  assertEq("create taken -> ok false", r1, { ok: false, reason: "code-taken" });
+  assertEq("create taken wrote nothing", localStorage.getItem("potato-pet:world:" + CODE), null);
+
+  // create: free -> {ok:true}, world written
+  App.remote = fake({ probe: async () => false });
+  const r2 = await App.save.create(world);
+  assertEq("create free -> ok true", r2, { ok: true });
+  assert("create free wrote the world",
+    JSON.parse(localStorage.getItem("potato-pet:world:" + CODE)).pet.name === "C");
+
+  // create: unknown (offline) -> still proceeds
+  App.save._resetSync();
+  await App.save.remove(CODE);
+  App.remote = fake({ available: () => false });
+  const r3 = await App.save.create(world);
+  assertEq("create unknown -> ok true", r3, { ok: true });
+
+  App.remote = realRemote;
+  App.save._resetSync();
+  await App.save.remove(CODE);
+});

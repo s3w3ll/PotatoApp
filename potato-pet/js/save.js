@@ -106,7 +106,16 @@ App.save = (function () {
     return world;
   }
 
-  async function create(world) {          // Task 5 adds checkCode + result object
+  async function checkCode(code) {
+    if (!App.remote || !App.remote.available()) return "unknown";
+    try { return (await App.remote.probe(code)) ? "taken" : "free"; }
+    catch (_) { return "unknown"; }
+  }
+
+  async function create(world) {
+    if ((await checkCode(world.code)) === "taken") {
+      return { ok: false, reason: "code-taken" };
+    }
     await set(world);
     return { ok: true };
   }
@@ -187,7 +196,7 @@ App.save = (function () {
   }
 
   return Object.assign(module, {
-    list, load, set, create, remove,
+    list, load, set, create, remove, checkCode,
     _migrate: migrate, _migrations: migrations,
     _readBackup: code => {
       try { return JSON.parse(localStorage.getItem(backupKey(code))); }
