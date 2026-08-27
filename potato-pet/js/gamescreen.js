@@ -1,6 +1,7 @@
 window.App = window.App || {};
 App.gamescreen = (function () {
   let container = null, world = null, hideRound = null;
+  const roundHistory = { math: [], spell: [] };
 
   function boot(el, w) {
     container = el; world = w;
@@ -129,7 +130,7 @@ App.gamescreen = (function () {
       if (i >= round.questions.length) return finish();
       const q = round.questions[i];
       const prompt = kind === "math" ? q.prompt : "Which spelling is right?";
-      const opts = kind === "math" ? q.options : q.options;
+      const opts = q.options;
       const answer = kind === "math" ? q.answer : q.word;
       panel.innerHTML = '<p>Question ' + (i + 1) + ' / ' + round.questions.length + '</p><h3>' + prompt + '</h3>' +
         (kind === "spelling" ? '<p><em>(listen)</em></p>' : '') +
@@ -149,8 +150,8 @@ App.gamescreen = (function () {
       world.stars += gained;
       world.learn.game.bestStreak = Math.max(world.learn.game.bestStreak, best);
       persist(); refresh();
-      const offer = App.games.shouldOfferLevelUp([{ correct: correct, total: round.questions.length },
-        { correct: correct, total: round.questions.length }]);
+      roundHistory[kind].push({ correct: correct, total: round.questions.length });
+      const offer = App.games.shouldOfferLevelUp(roundHistory[kind]);
       panel.innerHTML = '<h3>Round done!</h3><p>' + correct + ' / ' + round.questions.length +
         ' right · +★' + gained + '</p>' +
         (offer ? '<p><button id="levelup">Try a harder level</button></p>' : '') +

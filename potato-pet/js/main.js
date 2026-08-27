@@ -5,11 +5,13 @@ function showOverlay(msg) {
   o.innerHTML = "<div><p>" + msg + "</p><button onclick=\"location.reload()\">Reload</button></div>";
   o.hidden = false;
 }
-window.addEventListener("error", () => {
+window.addEventListener("error", (e) => {
+  e.preventDefault();
   const name = App.state.world && App.state.world.pet ? App.state.world.pet.name : "Your pet";
   showOverlay("Uh oh, " + (name || "your pet") + " tripped! 🩹");
 });
-window.addEventListener("unhandledrejection", () => {
+window.addEventListener("unhandledrejection", (e) => {
+  e.preventDefault();
   const name = App.state.world && App.state.world.pet ? App.state.world.pet.name : "Your pet";
   showOverlay("Uh oh, " + (name || "your pet") + " tripped! 🩹");
 });

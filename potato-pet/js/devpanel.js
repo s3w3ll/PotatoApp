@@ -18,12 +18,12 @@ App.devpanel = (function () {
       const n = world.pet.needs; const k = ["hunger","energy","fun"][Math.floor(Math.random()*3)];
       n[k] = 26; App.gamescreen.refresh(); App.save.set(world);
     });
-    btn("show backup", () => window.prompt("Backup string:", App.backup.exportString(world)));
+    btn("show backup string", () => window.prompt("Backup string:", App.backup.exportString(world)));
     btn("corrupt save", () => {
       localStorage.setItem("potato-pet:world:" + world.code, "{broken");
       location.reload();
     });
-    btn("reset pet", async () => { await App.save.remove(world.code); location.reload(); });
+    btn("reset this pet", async () => { await App.save.remove(world.code); location.reload(); });
     document.body.appendChild(p);
   }
   return { mount };
