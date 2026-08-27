@@ -133,9 +133,9 @@ App.gamescreen = (function () {
       const opts = q.options;
       const answer = kind === "math" ? q.answer : q.word;
       panel.innerHTML = '<p>Question ' + (i + 1) + ' / ' + round.questions.length + '</p><h3>' + prompt + '</h3>' +
-        (kind === "spelling" ? '<p><em>(listen)</em></p>' : '') +
+        (kind === "spell" ? '<p><em>(listen)</em></p>' : '') +
         opts.map(o => '<button data-opt="' + o + '">' + o + '</button>').join("");
-      if (kind === "spelling" && window.speechSynthesis) {
+      if (kind === "spell" && window.speechSynthesis) {
         try { speechSynthesis.speak(new SpeechSynthesisUtterance(q.word)); } catch (_) {}
       }
       panel.querySelectorAll("[data-opt]").forEach(b => b.addEventListener("click", () => {
