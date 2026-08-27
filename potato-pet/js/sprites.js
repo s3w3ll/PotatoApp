@@ -4,20 +4,31 @@ App.sprites = (function () {
     strawberry: "#e5484d", broccoli: "#3fae5a", turtle: "#2f7d5d", cat: "#d9922b",
     frog: "#5bb85b", donut: "#c98bb9", carrot: "#e08a3c", penguin: "#3a4a5a"
   };
-  const baseAnims = {
-    idle:  { frames: 2, fps: 2 },
-    happy: { frames: 4, fps: 8 },
-    eat:   { frames: 4, fps: 6 },
-    sleep: { frames: 2, fps: 1 },
-    peek:  { frames: 1, fps: 1 }
+  const CELL = 32, COLS = 2, VARIANTS = 4;
+  const ANIMS = {
+    idle:  { row: 0, frames: 2, fps: 2 },
+    happy: { row: 1, frames: 2, fps: 8 },
+    eat:   { row: 2, frames: 2, fps: 6 },
+    sleep: { row: 3, frames: 2, fps: 1 }
   };
+  const ROWS = Object.keys(ANIMS).length;
   const manifest = {};
   (App.world.SPECIES).forEach(s => {
-    manifest[s] = { placeholderColor: COLORS[s] || "#999", anims: Object.assign({}, baseAnims) };
+    manifest[s] = {
+      cell: CELL, cols: COLS, variants: VARIANTS, rows: ROWS,
+      placeholderColor: COLORS[s] || "#999",
+      sheet: v => "assets/sprites/pet/" + s + "-" + v + ".png",
+      anims: ANIMS
+    };
   });
   function animFor(species, name) {
-    const m = manifest[species] || { anims: baseAnims };
-    return m.anims[name] || m.anims.idle;
+    const m = manifest[species];
+    const a = (m && m.anims) || ANIMS;
+    return a[name] || a.idle;
   }
-  return { manifest, animFor };
+  function variantFor(tint) {
+    const t = (typeof tint === "number" && isFinite(tint)) ? tint : 0;
+    return ((Math.floor(t / 90) % VARIANTS) + VARIANTS) % VARIANTS;
+  }
+  return { manifest, animFor, variantFor, CELL, COLS, VARIANTS };
 })();
