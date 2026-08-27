@@ -42,13 +42,27 @@ App.room = (function () {
     const cells = [];
     for (let y = 0; y < ROWS; y++) for (let x = 0; x < COLS; x++) {
       const here = world.room.placed.find(p => p.x === x && p.y === y);
-      cells.push(
-        '<button class="cell" data-x="' + x + '" data-y="' + y + '">' +
-        (here ? '<span class="deco" data-item="' + here.item + '">' +
-                (byId(here.item) ? byId(here.item).label[0] : "?") + '</span>' : '') +
-        '</button>');
+      let inner = "";
+      if (here) {
+        const c = byId(here.item);
+        const letter = c ? c.label[0] : "?";
+        inner = '<span class="deco pixel" data-item="' + here.item +
+          '" style="background-image:url(assets/sprites/deco/' + here.item + '.png)">' + letter + '</span>';
+      }
+      cells.push('<button class="cell" data-x="' + x + '" data-y="' + y + '">' + inner + '</button>');
     }
-    container.innerHTML = '<div class="room theme-' + world.room.theme + '">' + cells.join("") + '</div>';
+    container.innerHTML =
+      '<div class="room theme-' + world.room.theme + '"' +
+        ' style="background-image:url(assets/sprites/room/floor-' + world.room.theme + '.png)">' +
+      '<div class="wall" style="background-image:url(assets/sprites/room/wall-' + world.room.theme + '.png)"></div>' +
+      cells.join("") + '</div>';
+    // deco fallback: if a sprite 404s, reveal the letter
+    container.querySelectorAll(".deco").forEach(sp => {
+      const url = "assets/sprites/deco/" + sp.dataset.item + ".png";
+      const probe = new Image();
+      probe.onerror = () => sp.classList.add("noimg");
+      probe.src = url;
+    });
     if (opts.placeMode && opts.onPlaceCell) {
       container.querySelectorAll(".cell").forEach(btn => btn.addEventListener("click", () => {
         opts.onPlaceCell(+btn.dataset.x, +btn.dataset.y);

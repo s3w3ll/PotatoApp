@@ -71,7 +71,8 @@ App.gamescreen = (function () {
     panel.innerHTML = '<h3>Star Shop</h3>' + App.room.CATALOG.map(c => {
       const owned = world.room.owned.includes(c.id);
       return '<button data-buy="' + c.id + '"' + (owned || !App.room.canBuy(world, c.id) ? ' disabled' : '') +
-        '>' + c.label + (owned ? ' ✓' : ' — ★' + c.price) + '</button>';
+        '><span class="shopicon pixel" style="background-image:url(assets/sprites/deco/' + c.id + '.png)"></span>' +
+        c.label + (owned ? ' ✓' : ' — ★' + c.price) + '</button>';
     }).join("") + '<div id="roomwrap"></div><p><button id="placemode">Place items</button></p>' +
       '<p><button id="backupbtn">Backup</button> <button id="restorebtn">Restore</button></p>';
     App.room.renderRoom(document.getElementById("roomwrap"), world, {});
