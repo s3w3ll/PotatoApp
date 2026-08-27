@@ -1,0 +1,21 @@
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body {
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  background: #f4ecd8;
+  color: #3b2f2f;
+  -webkit-user-select: none; user-select: none;
+  touch-action: manipulation;
+}
+#app { max-width: 720px; margin: 0 auto; padding: 12px; }
+.pixel { image-rendering: pixelated; image-rendering: crisp-edges; }
+button {
+  font: inherit; padding: 10px 16px; border-radius: 10px; border: 2px solid #3b2f2f;
+  background: #ffd97d; cursor: pointer;
+}
+button:disabled { opacity: .45; cursor: default; }
+#overlay {
+  position: fixed; inset: 0; display: grid; place-items: center;
+  background: rgba(0,0,0,.55); color: #fff; text-align: center; padding: 24px;
+}
+#overlay[hidden] { display: none; }
