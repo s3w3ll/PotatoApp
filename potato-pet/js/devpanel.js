@@ -24,6 +24,17 @@ App.devpanel = (function () {
       location.reload();
     });
     btn("reset this pet", async () => { await App.save.remove(world.code); location.reload(); });
+    const backup = App.save._readBackup(world.code);
+    if (backup && backup.world) {
+      const when = new Date(backup.replacedAt).toLocaleString();
+      btn("restore previous state (" + when + ")", async () => {
+        if (!window.confirm("Replace the current pet with the backup from " + when + "?")) return;
+        const restored = backup.world;
+        restored.savedAt = Date.now();
+        await App.save.set(restored);
+        location.reload();
+      });
+    }
     document.body.appendChild(p);
   }
   return { mount };

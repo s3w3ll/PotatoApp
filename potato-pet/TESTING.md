@@ -28,3 +28,18 @@ should read `N / N passed`. Re-run after ANY change to a `js/*.js` file.
     "didn't look right"; Restore with that string reloads unchanged.
 15. `?dev` → "corrupt save" → reload lands on
     "we couldn't read that pet" with a fresh-start option (no silent wipe).
+
+## Phase 2 — cross-device sync (needs `apiBase` set)
+
+1. Adopt a pet in browser A. Write down the code. Decorate the room a bit.
+2. Open browser B (or a private window). "Enter a code" -> type the code.
+   The pet, stars, and room should match A.
+3. In B: feed the pet, buy/place one decoration. Close the tab (or wait ~35s).
+4. Reload A. B's changes appear. Open `index.html?dev` on A — a
+   "restore previous state" button is now there; clicking it brings back
+   A's pre-sync pet.
+5. Turn off wifi. Play in A — everything still works, no errors, no spinners.
+   Turn wifi back on, interact once, wait ~35s — the change reaches B on its
+   next load.
+6. Make a new pet while offline — it should still work (the code is not
+   checked); it syncs on the next load.

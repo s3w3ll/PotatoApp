@@ -1,6 +1,6 @@
 # Potato Pet
 
-A gentle browser virtual pet for a 10-year-old. Phase 1: fully local, no server.
+A gentle browser virtual pet for a 10-year-old. Local-first; optional cloud sync via a short code (Phase 2).
 
 ## Run it
 - **Easiest:** open `index.html` by double-clicking it.
@@ -9,6 +9,7 @@ A gentle browser virtual pet for a 10-year-old. Phase 1: fully local, no server.
 
 ## Run the logic tests 
 Open `tests.html`. All lines should say `ok`.
+Headless: `node run-suite.mjs` from this folder (needs Node 20+). Prints `N / N passed`.
 
 ## Add content (no coding beyond editing lists)
 Everything the child sees as words lives in `js/content.js`:
@@ -29,7 +30,9 @@ Decoration items are the `CATALOG` array in `js/room.js`.
 Open `index.html?dev` for a panel: skip time, add stars, force a mood,
 corrupt/reset the save, show the backup string.
 
-## What's next (later phases)
-- Phase 2: Cloudflare D1 sync so a code restores the pet on any device.
+## Cloud sync (optional)
+Off by default. To turn it on, follow `../worker/SETUP.md` and set
+`apiBase` in `js/config.js`. With it off, the game is 100% local.
+
+## What's next
 - Phase 3: real CC0 pixel-art sprites in place of the coloured blocks.
-- Phase 4: deploy to Cloudflare Pages.

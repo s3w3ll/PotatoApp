@@ -32,7 +32,16 @@ App.startscreen = (function () {
       if (!/^[A-Z0-9]{3}-?[A-Z0-9]{3}$/.test(code)) return alert("That code doesn't look right.");
       const norm = code.length === 6 ? code.slice(0,3) + "-" + code.slice(3) : code;
       let world = await safeLoad(norm);
-      if (!world) { world = App.world.generateWorld(norm); world.pet.name = "Friend"; await App.save.create(world); }
+      if (!world) {
+        const fresh = App.world.generateWorld(norm); fresh.pet.name = "Friend";
+        const res = await App.save.create(fresh);
+        if (res.ok) {
+          world = fresh;
+        } else {
+          try { world = await App.save.load(norm); } catch (_) { world = null; }  // server had it after all
+          if (!world) { alert("That code is in use on another device and we couldn't reach it. Try again in a moment."); return; }
+        }
+      }
       onReady(world);
     });
     container.querySelector("#makenew").addEventListener("click", () => startCreation(container, onReady));
@@ -43,7 +52,14 @@ App.startscreen = (function () {
     catch (e) {
       if (String(e.message).includes("SAVE_CORRUPT")) {
         if (confirm("We couldn't read that pet. Start a fresh one for this code?")) {
-          const w = App.world.generateWorld(code); w.pet.name = "Friend"; await App.save.create(w); return w;
+          await App.save.remove(code);                 // discard the unreadable local copy
+          let recovered = null;
+          try { recovered = await App.save.load(code); } catch (_) { recovered = null; }
+          if (recovered) return recovered;             // the server still had it
+          const w = App.world.generateWorld(code); w.pet.name = "Friend";
+          const res = await App.save.create(w);
+          if (!res.ok) { alert("Couldn't set that up right now — please try again."); return null; }
+          return w;
         }
         return null;
       }
@@ -51,8 +67,8 @@ App.startscreen = (function () {
     }
   }
 
-  function startCreation(container, onReady) {
-    let code = randomCode();
+  function startCreation(container, onReady, seedCode) {
+    let code = seedCode || randomCode();
     function paint() {
       const preview = App.world.generateWorld(code);
       const col = (App.sprites.manifest[preview.pet.species] || {}).placeholderColor || "#999";
@@ -86,7 +102,18 @@ App.startscreen = (function () {
       }
       const world = App.world.generateWorld(code);
       world.pet.name = res.value;
-      await App.save.create(world);
+      const result = await App.save.create(world);
+      if (!result.ok && result.reason === "code-taken") {
+        const fresh = randomCode();
+        container.innerHTML =
+          '<h1>Almost!</h1>' +
+          '<p>That code was already taken — here\'s a new one.</p>' +
+          '<p><strong>' + fresh + '</strong></p>' +
+          '<p><button id="again">OK</button></p>';
+        container.querySelector("#again").addEventListener("click",
+          () => startCreation(container, onReady, fresh));
+        return;
+      }
       container.innerHTML =
         '<h1>All set!</h1><p>Your pet\'s code is:</p>' +
         '<p class="bigcode">' + code + '</p>' +
