@@ -1,6 +1,7 @@
 // Potato Pet art generator. node:zlib only, no deps. Deterministic output.
 // Run:  node gen-art.mjs           regenerate every PNG under potato-pet/assets/sprites/
 //       node gen-art.mjs --preview print ASCII of every sprite, write nothing
+import fs from "node:fs";
 import zlib from "node:zlib";
 import { fileURLToPath } from "node:url";
 
@@ -70,9 +71,401 @@ export function encodePNG({ width, height, palette, indices }) {
   ]);
 }
 
-// --- generator entry (filled in by later tasks) ---
+// ===================================================================
+// Pixel-grid DSL
+// ===================================================================
+
+// A "grid" is { w, h, rows: string[] } — each row w chars, each char a
+// palette key or "." (transparent). Grids carry no palette; callers map
+// keys -> hex at pack time.
+
+export function parseGrid({ palette, pixels }) {
+  const h = pixels.length;
+  const w = Math.max(...pixels.map(r => r.length));
+  const rows = pixels.map(r => (r + ".".repeat(w)).slice(0, w).replace(/ /g, "."));
+  for (const r of rows) for (const ch of r) {
+    if (ch !== "." && !(ch in palette)) throw new Error("parseGrid: unknown key '" + ch + "'");
+  }
+  return { w, h, rows };
+}
+
+const g2d = g => g.rows.map(r => r.split(""));
+const from2d = cells => ({ w: cells[0].length, h: cells.length, rows: cells.map(r => r.join("")) });
+
+function scale2x(g) {
+  const out = [];
+  for (const row of g2d(g)) { const o = row.flatMap(c => [c, c]); out.push(o, o.slice()); }
+  return from2d(out);
+}
+
+function pad(g, W, H) {
+  const src = g2d(g);
+  const ox = Math.floor((W - g.w) / 2), oy = Math.floor((H - g.h) / 2);
+  const out = Array.from({ length: H }, () => Array(W).fill("."));
+  for (let y = 0; y < g.h; y++) for (let x = 0; x < g.w; x++) {
+    const ty = oy + y, tx = ox + x;
+    if (ty >= 0 && ty < H && tx >= 0 && tx < W) out[ty][tx] = src[y][x];
+  }
+  return from2d(out);
+}
+
+function bbox(cells) {
+  let x0 = 1e9, y0 = 1e9, x1 = -1, y1 = -1;
+  for (let y = 0; y < cells.length; y++) for (let x = 0; x < cells[0].length; x++)
+    if (cells[y][x] !== ".") { x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y); }
+  return { x0, y0, x1, y1 };
+}
+
+function shiftY(g, dy) {
+  const src = g2d(g), out = Array.from({ length: g.h }, () => Array(g.w).fill("."));
+  for (let y = 0; y < g.h; y++) { const sy = y - dy; if (sy >= 0 && sy < g.h) out[y] = src[sy].slice(); }
+  return from2d(out);
+}
+
+function widen(g) {
+  const cells = g2d(g), out = cells.map(r => r.slice());
+  for (let y = 0; y < g.h; y++) {
+    const xs = []; for (let x = 0; x < g.w; x++) if (cells[y][x] !== ".") xs.push(x);
+    if (!xs.length) continue;
+    const lo = xs[0], hi = xs[xs.length - 1];
+    if (lo - 1 >= 0 && out[y][lo - 1] === ".") out[y][lo - 1] = cells[y][lo];
+    if (hi + 1 < g.w && out[y][hi + 1] === ".") out[y][hi + 1] = cells[y][hi];
+  }
+  return from2d(out);
+}
+
+function mouthOpen(g, darkKey) {
+  const cells = g2d(g), b = bbox(cells), out = cells.map(r => r.slice());
+  if (b.x1 < 0) return from2d(out);
+  const cx = Math.floor((b.x0 + b.x1) / 2);
+  const my = b.y1 - Math.max(3, Math.floor((b.y1 - b.y0) * 0.28));
+  for (let y = my; y <= my + 1; y++) for (let x = cx - 1; x <= cx + 1; x++)
+    if (y >= 0 && y < g.h && x >= 0 && x < g.w && cells[y][x] !== ".") out[y][x] = darkKey;
+  return from2d(out);
+}
+
+function flattenSleep(g, factor) {
+  const cells = g2d(g), b = bbox(cells);
+  const out = Array.from({ length: g.h }, () => Array(g.w).fill("."));
+  if (b.x1 < 0) return from2d(out);
+  const srcH = b.y1 - b.y0 + 1, dstH = Math.max(1, Math.round(srcH * factor));
+  for (let dy = 0; dy < dstH; dy++) {
+    const sy = b.y0 + Math.min(srcH - 1, Math.floor(dy / factor));
+    const ty = b.y1 - dstH + 1 + dy;
+    if (ty >= 0 && ty < g.h) out[ty] = cells[sy].slice();
+  }
+  return from2d(out);
+}
+
+function drawZ(g, phase, zKey) {
+  const out = g2d(g).map(r => r.slice());
+  const zx = g.w - 8 + phase, zy = 3 - phase;
+  const glyph = ["zzzz", "..z.", ".z..", "zzzz"];
+  for (let i = 0; i < glyph.length; i++) for (let j = 0; j < 4; j++) {
+    if (glyph[i][j] === "z") {
+      const y = zy + i, x = zx + j;
+      if (y >= 0 && y < g.h && x >= 0 && x < g.w) out[y][x] = zKey;
+    }
+  }
+  return from2d(out);
+}
+
+function deriveFrames(base32, palette) {
+  const K = "K" in palette ? "K" : Object.keys(palette)[0];
+  const up = shiftY(base32, -1);
+  return {
+    idle:  [base32, up],
+    happy: [up, widen(up)],
+    eat:   [base32, mouthOpen(base32, K)],
+    sleep: [drawZ(flattenSleep(base32, 0.72), 0, "z"), drawZ(flattenSleep(base32, 0.72), 1, "z")],
+  };
+}
+
+// ===================================================================
+// Colour: hex <-> hsl, and per-variant recolour
+// ===================================================================
+
+function hexToHsl(hex) {
+  let [r, g, b] = hexToRGB(hex).map(v => v / 255);
+  const mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn;
+  let h = 0;
+  if (d) {
+    if (mx === r) h = ((g - b) / d) % 6;
+    else if (mx === g) h = (b - r) / d + 2;
+    else h = (r - g) / d + 4;
+    h *= 60; if (h < 0) h += 360;
+  }
+  const l = (mx + mn) / 2;
+  const s = d ? d / (1 - Math.abs(2 * l - 1)) : 0;
+  return [h, s, l];
+}
+
+function hslToHex(h, s, l) {
+  h = ((h % 360) + 360) % 360;
+  s = Math.min(1, Math.max(0, s));
+  l = Math.min(1, Math.max(0, l));
+  const c = (1 - Math.abs(2 * l - 1)) * s;
+  const x = c * (1 - Math.abs((h / 60) % 2 - 1));
+  const m = l - c / 2;
+  let r = 0, g = 0, b = 0;
+  if (h < 60) [r, g, b] = [c, x, 0];
+  else if (h < 120) [r, g, b] = [x, c, 0];
+  else if (h < 180) [r, g, b] = [0, c, x];
+  else if (h < 240) [r, g, b] = [0, x, c];
+  else if (h < 300) [r, g, b] = [x, 0, c];
+  else [r, g, b] = [c, 0, x];
+  const to = v => Math.round((v + m) * 255).toString(16).padStart(2, "0");
+  return "#" + to(r) + to(g) + to(b);
+}
+
+const VARIANT_MODES = ["natural", "warm", "cool", "pale"];
+
+function recolorPalette(palette, mode) {
+  const out = {};
+  for (const [k, hex] of Object.entries(palette)) {
+    if (k === "K" || k === "z" || mode === "natural") { out[k] = hex; continue; }
+    let [h, s, l] = hexToHsl(hex);
+    if (mode === "warm") { h -= 22; s = Math.min(1, s + 0.06); }
+    else if (mode === "cool") { h += 40; }
+    else if (mode === "pale") { l = Math.min(1, l + 0.16); s = Math.max(0, s - 0.22); }
+    out[k] = hslToHex(h, s, l);
+  }
+  return out;
+}
+
+// ===================================================================
+// Sheet packing + PNG output
+// ===================================================================
+
+function packSheet(rowsOfFrames, keyToHex) {
+  const CELL = 32, COLS = 2, ROWS = rowsOfFrames.length;
+  const W = COLS * CELL, H = ROWS * CELL;
+  const palette = ["#000000"];
+  const index = new Map([["#000000", 0]]);
+  const idxOf = hex => {
+    if (!index.has(hex)) { index.set(hex, palette.length); palette.push(hex); }
+    return index.get(hex);
+  };
+  const indices = new Uint8Array(W * H);
+  for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
+    const cells = g2d(rowsOfFrames[r][c]);
+    for (let y = 0; y < CELL; y++) for (let x = 0; x < CELL; x++) {
+      const key = cells[y][x];
+      indices[(r * CELL + y) * W + (c * CELL + x)] = key === "." ? 0 : idxOf(keyToHex[key]);
+    }
+  }
+  return { width: W, height: H, palette, indices };
+}
+
+// ===================================================================
+// Art data
+// ===================================================================
+
+const SPECIES = "strawberry broccoli turtle cat frog donut carrot penguin".split(" ");
+
+const SPECIES_ART = {
+  strawberry: {
+    palette: { K: "#40201f", r: "#e5484d", d: "#b3272c", g: "#3fae5a", y: "#ffd97d" },
+    pixels: [
+      "......gg........",
+      ".....gKKg.......",
+      "....gKrrKg......",
+      "...KKrrrrKK.....",
+      "..KrryrrrrK.....",
+      "..KryrrrryrK....",
+      ".KrrrryrrrrK....",
+      ".KryrrrrrrryK...",
+      ".KrrrryrrdrrK...",
+      "..KryrrrrrrK....",
+      "..KrrryrrryK....",
+      "...KrrrrrrK.....",
+      "...KKrrrrKK.....",
+      ".....KrrK.......",
+      "......KK........",
+    ],
+  },
+  broccoli: {
+    palette: { K: "#1f3a1f", g: "#3fae5a", d: "#2f8a45", s: "#cdb98a" },
+    pixels: [
+      "....gg..gg.....",
+      "...gKggggKg....",
+      "..gKgddgggKg...",
+      ".gKggggddgggK..",
+      ".KgdggggggddgK.",
+      ".KggddgggggggK.",
+      "..KgggggddggK..",
+      "...KKgggggKK...",
+      ".....KssK......",
+      ".....KssK......",
+      ".....KssK......",
+      "....KKssKK.....",
+      ".....KKKK......",
+    ],
+  },
+  turtle: {
+    palette: { K: "#173d2c", g: "#2f7d5d", d: "#1d5a41", h: "#8fd0a8", y: "#ffd97d" },
+    pixels: [
+      "................",
+      "....KKKKKKK.....",
+      "...KggddggK.....",
+      "..KghgddghgK....",
+      "..KgddhhddgK....",
+      ".KghddggddhgK...",
+      ".Kgddhggh ddgK.",
+      ".Kghggddggh gK.",
+      "..KggddhhggK....",
+      "...KKgddgKK.....",
+      "..KK.KKKK.KK....",
+      ".K.....y....K...",
+      ".K..........K..",
+    ],
+  },
+  cat: {
+    palette: { K: "#2b2320", f: "#d9922b", d: "#b5771f", E: "#1b3a5c", w: "#ffffff" },
+    pixels: [
+      "..K.........K...",
+      ".KfK.......KfK..",
+      ".KffKKKKKKKffK..",
+      ".KfffffffffffK..",
+      "KffEffffffEffK..",
+      "KffffffwwffffK..",
+      "KffdffffffdffK..",
+      "KffffffffffffK..",
+      ".KffffffffffK...",
+      "..KffffffffK....",
+      "..KffKKKKffK....",
+      "..KfK...KfK.....",
+      "..KK.....KK.....",
+      "...........Kdd..",
+      "............KKd.",
+    ],
+  },
+  frog: {
+    palette: { K: "#1c3a1c", g: "#5bb85b", d: "#3f8f3f", E: "#101010", w: "#ffffff" },
+    pixels: [
+      "...KK......KK...",
+      "..KwEK....KwEK..",
+      "..KEEK....KEEK..",
+      ".KKggKKKKKKggKK.",
+      ".KggggggggggggK.",
+      "KgdggggggggdggK",
+      "KggggddddggggK.",
+      "KgdgggggggggdgK",
+      ".KggddgggddggK.",
+      ".KKgggggggggKK.",
+      "..KKgKKKKgKK...",
+      "..K.K....K.K...",
+    ],
+  },
+  donut: {
+    palette: { K: "#5a3b2a", p: "#c98bb9", d: "#a86aa0", i: "#7d4b6f", y: "#ffd97d", c: "#8fd0e0" },
+    pixels: [
+      "...KKKKKKKK.....",
+      "..KppdppyppK....",
+      ".KpypppcpppdK...",
+      ".KppppKKppppK..",
+      "KpycppK..KppyK.",
+      "Kppppp...KpcpK.",
+      "KpdpppK..KpppK.",
+      ".KppppKKppydK..",
+      ".KpcppppppppK..",
+      "..KppyppdppK....",
+      "...KKKKKKKK.....",
+    ],
+  },
+  carrot: {
+    palette: { K: "#5a3a1a", o: "#e08a3c", d: "#b96a24", g: "#3fae5a" },
+    pixels: [
+      ".....g.g.g......",
+      "...g.gKgKg.g....",
+      "...gKgKgKgKg....",
+      "....gKKgKKg.....",
+      "....KooooooK....",
+      "....KodooodK....",
+      "....KooooooK....",
+      ".....KoddoK.....",
+      ".....KooooK.....",
+      "......KoddK.....",
+      "......KooK......",
+      ".......KoK......",
+      ".......KK.......",
+    ],
+  },
+  penguin: {
+    palette: { K: "#1a2230", b: "#3a4a5a", w: "#f2f2f2", o: "#e08a3c", E: "#101010" },
+    pixels: [
+      "....KKKKKK......",
+      "..KKbbbbbbKK....",
+      ".KbbbbbbbbbbK...",
+      ".KbbwEbbEwbbK...",
+      ".KbbwwoowwbbK...",
+      "KbbwwwwwwwwbbK..",
+      "Kbwwwwwwwwwwb K.",
+      "Kbwwwwwwwwwwb K.",
+      "KbbwwwwwwwwbbK..",
+      ".KbbwwwwwwbbK...",
+      ".KKbbwwwwbbKK...",
+      "..oKKbwwbKKo....",
+      "..oo.KKKK.oo....",
+    ],
+  },
+};
+
+// ===================================================================
+// Generation
+// ===================================================================
+
+const SPRITE_DIR = new URL("../potato-pet/assets/sprites/", import.meta.url);
+
+const LICENSE_TEXT =
+  "All sprites in this directory are generated by tools/gen-art.mjs from\n" +
+  "hand-authored pixel grids in that script. They are released to the public\n" +
+  "domain (CC0 1.0). No third-party assets are used or redistributed.\n" +
+  "Regenerate with:  cd tools && npm run gen\n";
+
+function previewGrid(label, g) {
+  console.log("--- " + label + " ---");
+  for (const row of g.rows) console.log(row.replace(/\./g, " "));
+  console.log("");
+}
+
+export function buildPetSheet(species, variant) {
+  const art = SPECIES_ART[species];
+  const base32 = pad(scale2x(parseGrid(art)), 32, 32);
+  const paletteZ = { ...art.palette, z: "#f2f2f2" };
+  const f = deriveFrames(base32, paletteZ);
+  const rows = [f.idle, f.happy, f.eat, f.sleep];
+  return packSheet(rows, recolorPalette(paletteZ, VARIANT_MODES[variant]));
+}
+
+function genPets({ preview }) {
+  if (!preview) fs.mkdirSync(new URL("pet/", SPRITE_DIR), { recursive: true });
+  for (const sp of SPECIES) {
+    const art = SPECIES_ART[sp];
+    if (!("K" in art.palette)) throw new Error(sp + ": palette needs a 'K' outline key");
+    if (preview) {
+      const base32 = pad(scale2x(parseGrid(art)), 32, 32);
+      const f = deriveFrames(base32, { ...art.palette, z: "#f2f2f2" });
+      previewGrid(sp + " idle[0]", f.idle[0]);
+      previewGrid(sp + " happy[1]", f.happy[1]);
+      previewGrid(sp + " eat[1]", f.eat[1]);
+      previewGrid(sp + " sleep[0]", f.sleep[0]);
+      continue;
+    }
+    for (let v = 0; v < 4; v++) {
+      const png = encodePNG(buildPetSheet(sp, v));
+      fs.writeFileSync(new URL("pet/" + sp + "-" + v + ".png", SPRITE_DIR), png);
+    }
+  }
+}
+
 function main() {
-  console.log("gen-art: nothing to generate yet");
+  const preview = process.argv.includes("--preview");
+  genPets({ preview });
+  if (!preview) {
+    fs.writeFileSync(new URL("LICENSE.txt", SPRITE_DIR), LICENSE_TEXT);
+    console.log("gen-art: wrote pet sheets + LICENSE.txt");
+  }
 }
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) main();

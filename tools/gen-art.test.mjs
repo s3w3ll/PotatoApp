@@ -1,7 +1,35 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import zlib from "node:zlib";
+import fs from "node:fs";
+import path from "node:path";
+import { execFileSync } from "node:child_process";
 import { crc32, encodePNG, PNG_SIG } from "./gen-art.mjs";
+
+const HERE = new URL(".", import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, "$1");
+const OUT = new URL("../potato-pet/assets/sprites/", import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, "$1");
+const SPECIES = "strawberry broccoli turtle cat frog donut carrot penguin".split(" ");
+const gen = (...args) => execFileSync("node", ["gen-art.mjs", ...args], { cwd: HERE });
+
+function readPng(p) { return fs.readFileSync(p); }
+function isValidPNG(b) {
+  for (let i = 0; i < 8; i++) if (b[i] !== PNG_SIG[i]) return false;
+  return b.readUInt32BE(16) > 0 && b.readUInt32BE(20) > 0;
+}
+function dims(b) { return [b.readUInt32BE(16), b.readUInt32BE(20)]; }
+function idatIndices(b) {
+  let off = 8, idat = [];
+  while (off < b.length) {
+    const len = b.readUInt32BE(off), type = b.toString("latin1", off + 4, off + 8);
+    if (type === "IDAT") idat.push(b.subarray(off + 8, off + 8 + len));
+    off += 12 + len;
+  }
+  const raw = zlib.inflateSync(Buffer.concat(idat));
+  const [w, h] = dims(b);
+  const px = new Uint8Array(w * h);
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) px[y * w + x] = raw[y * (1 + w) + 1 + x];
+  return { w, h, px };
+}
 
 // a hand-checked 4x4: index grid, palette [transparent, black, white]
 const W = 4, H = 4;
@@ -51,4 +79,38 @@ test("encodePNG emits a valid colour-type-3 PNG", () => {
     off += 12 + len;
   }
   assert.deepEqual(seen, ["IHDR", "PLTE", "tRNS", "IDAT", "IEND"]);
+});
+
+test("gen-art writes all 32 pet sheets, 64x128, valid PNG", () => {
+  gen();
+  for (const s of SPECIES) for (let v = 0; v < 4; v++) {
+    const p = path.join(OUT, "pet", `${s}-${v}.png`);
+    assert.ok(fs.existsSync(p), `missing ${s}-${v}.png`);
+    const b = readPng(p);
+    assert.ok(isValidPNG(b), `invalid PNG ${s}-${v}`);
+    assert.deepEqual(dims(b), [64, 128], `${s}-${v} dims`);
+    const { px } = idatIndices(b);
+    const nonEmpty = px.reduce((n, v2) => n + (v2 ? 1 : 0), 0);
+    assert.ok(nonEmpty > 200 && nonEmpty < px.length * 0.9, `${s}-${v} pixel fill ${nonEmpty}/${px.length}`);
+  }
+});
+
+test("gen-art is deterministic (two runs, identical bytes)", () => {
+  const cap = () => SPECIES.flatMap(s => [0, 1, 2, 3].map(v =>
+    fs.readFileSync(path.join(OUT, "pet", `${s}-${v}.png`))));
+  gen();
+  const a = cap();
+  gen();
+  const b = cap();
+  a.forEach((buf, i) => assert.ok(buf.equals(b[i]), "pet file " + i + " changed between runs"));
+});
+
+test("each species has at least one variant differing from variant 0", () => {
+  for (const s of SPECIES) {
+    const v0 = fs.readFileSync(path.join(OUT, "pet", `${s}-0.png`));
+    let diff = false;
+    for (let v = 1; v < 4; v++)
+      if (!v0.equals(fs.readFileSync(path.join(OUT, "pet", `${s}-${v}.png`)))) diff = true;
+    assert.ok(diff, `${s}: all 4 variants identical`);
+  }
 });
