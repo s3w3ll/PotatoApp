@@ -30,6 +30,10 @@ function assertThrows(name, fn, msgIncludes) {
   try { fn(); assert(name + " — expected throw", false); }
   catch (e) { assert(name, !msgIncludes || String(e.message).includes(msgIncludes)); }
 }
+async function assertThrowsAsync(name, fn, msgIncludes) {
+  try { await fn(); assert(name + " — expected throw", false); }
+  catch (e) { assert(name, !msgIncludes || String(e.message).includes(msgIncludes)); }
+}
 async function runTests() {
   _results = [];
   for (const t of TESTS) { try { await t(); } catch (e) { _results.push(["THREW: " + e.message, false]); } }
@@ -43,6 +47,7 @@ window.addEventListener("load", runTests);
 </script>
 
 <script src="js/rng.tests.js"></script>
+<script src="js/save.tests.js"></script>
 <script>runTests();</script>
 </body>
 </html>
