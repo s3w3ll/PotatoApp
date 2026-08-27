@@ -74,7 +74,7 @@ sandbox.assertThrowsAsync = async (name, fn, msg) => {
 
 // test-file block — keep in sync with tests.html
 [
-  'rng.tests.js', 'save.tests.js', 'world.tests.js', 'state.tests.js',
+  'rng.tests.js', 'save.tests.js', 'remote.tests.js', 'world.tests.js', 'state.tests.js',
   'content.tests.js', 'games.tests.js', 'facts.tests.js',
   'interactions.tests.js', 'room.tests.js', 'backup.tests.js',
 ].forEach(f => {
