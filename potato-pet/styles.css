@@ -28,6 +28,7 @@ button:disabled { opacity: .45; cursor: default; }
 .pet[data-mood="bored"]  { animation-name: wiggle; }
 .pet.anim-eat  { animation: chomp .4s steps(2) 3; }
 .pet.anim-peek { opacity: .5; }
+.pet.anim-sleep { animation: snooze 1.6s ease-in-out infinite; }
 .speech {
   position: absolute; top: 8px; max-width: 80%; background: #fff;
   border: 2px solid #3b2f2f; border-radius: 12px; padding: 8px 12px; font-size: 14px;
@@ -36,3 +37,4 @@ button:disabled { opacity: .45; cursor: default; }
 @keyframes bob { 0%,100% { transform: translateY(0) } 50% { transform: translateY(-10px) } }
 @keyframes wiggle { 0%,100% { transform: rotate(-4deg) } 50% { transform: rotate(4deg) } }
 @keyframes chomp { 0%,100% { transform: scale(1) } 50% { transform: scale(.9) } }
+@keyframes snooze { 0%,100% { transform: scale(1); opacity: 1; } 50% { transform: scale(0.96); opacity: 0.75; } }
