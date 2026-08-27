@@ -3,7 +3,13 @@ import assert from "node:assert/strict";
 import { unstable_dev } from "wrangler";
 
 let worker;
-const CODE = "ABC-DEF";
+const ALPHABET = "23456789ABCDEFGHJKMNPQRSTUVWXYZ";
+function randCode() {
+  let code = "";
+  for (let i = 0; i < 6; i++) code += ALPHABET[Math.floor(Math.random() * ALPHABET.length)];
+  return code.slice(0, 3) + "-" + code.slice(3);
+}
+const CODE = randCode();
 const goodWorld = () => ({
   version: 1, code: CODE, savedAt: 5,
   pet: { species: "cat", name: "T", needs: { hunger: 1, energy: 1, fun: 1 } },
@@ -19,7 +25,8 @@ before(async () => {
 after(async () => { await worker.stop(); });
 
 test("GET unknown code -> 404 with CORS", async () => {
-  const res = await worker.fetch(`/world/${CODE}`);
+  const unknownCode = randCode();
+  const res = await worker.fetch(`/world/${unknownCode}`);
   assert.equal(res.status, 404);
   assert.equal(res.headers.get("access-control-allow-origin"), "https://tato.forgesync.co.nz");
 });
@@ -43,7 +50,8 @@ test("PUT then GET round-trips data; updated_at is server-set", async () => {
 
 test("HEAD reflects existence", async () => {
   assert.equal((await worker.fetch(`/world/${CODE}`, { method: "HEAD" })).status, 200);
-  assert.equal((await worker.fetch(`/world/ZZZ-ZZZ`, { method: "HEAD" })).status, 404);
+  const unknownCode = randCode();
+  assert.equal((await worker.fetch(`/world/${unknownCode}`, { method: "HEAD" })).status, 404);
 });
 
 test("PUT oversized body -> 413", async () => {
