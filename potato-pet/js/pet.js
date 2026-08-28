@@ -1,6 +1,6 @@
 window.App = window.App || {};
 App.pet = (function () {
-  const SCALE = 3;
+  const SCALE = 1.5;
   let el = null, bubble = null, bubbleTimer = null, world = null;
   let stepTimer = null, ambient = "idle", col = 0;
 

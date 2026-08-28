@@ -103,5 +103,27 @@ button:disabled { opacity: .45; cursor: default; }
 .bigcode { font-size: 2rem; letter-spacing: .1em; font-weight: 800; }
 .err { color: #b00020; }
 .hud { display: flex; justify-content: space-between; align-items: center; font-size: 1.3rem; font-weight: 800; }
-.actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
-#panel { min-height: 80px; display: flex; flex-wrap: wrap; gap: 8px; }
+.actions {
+  width: min(360px, 100%); margin: 10px auto 0;
+  display: flex; gap: 6px;
+}
+.actions button {
+  flex: 1; min-width: 0;
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  padding: 8px 3px; font-size: 11px; font-weight: 700; line-height: 1.15;
+  border: 2px solid transparent; border-radius: 12px;
+  background: #efe3c8; color: #6b5b4b; text-align: center;
+}
+.actions button .ic { font-size: 18px; line-height: 1; }
+.actions button.on { background: #ffd97d; color: #3b2f2f; border-color: #3b2f2f; }
+.actions button:disabled { opacity: .4; }
+
+#panel {
+  width: min(360px, 100%); margin: 10px auto 0; padding: 12px;
+  border: 2px solid #3b2f2f; border-radius: 12px; background: #fffaf0;
+  display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-start;
+}
+#panel[hidden] { display: none; }
+#panel h3 { flex-basis: 100%; margin: 0; font-size: 14px; }
+#panel p  { flex-basis: 100%; margin: 2px 0; }
+#panel .opts { flex-basis: 100%; display: flex; flex-wrap: wrap; gap: 8px; }

@@ -9,13 +9,13 @@ App.gamescreen = (function () {
       '<header class="hud"><span id="stars">★ 0</span></header>' +
       '<div id="stage"></div>' +
       '<nav class="actions">' +
-        '<button data-act="feed">Feed</button>' +
-        '<button data-act="bed">Bed</button>' +
-        '<button data-act="hide">Hide &amp; Seek</button>' +
-        '<button data-act="decorate">Decorate</button>' +
-        '<button data-act="learn">Learn</button>' +
-        '<button data-act="fact">Tell me something</button>' +
-      '</nav><section id="panel"></section>';
+        '<button data-act="feed"><span class="ic">🍎</span>Feed</button>' +
+        '<button data-act="bed"><span class="ic">💤</span>Bed</button>' +
+        '<button data-act="hide"><span class="ic">🙈</span>Hide &amp; Seek</button>' +
+        '<button data-act="decorate"><span class="ic">🎨</span>Decorate</button>' +
+        '<button data-act="learn"><span class="ic">📚</span>Learn</button>' +
+        '<button data-act="fact"><span class="ic">💬</span>Tell me something</button>' +
+      '</nav><section id="panel" hidden></section>';
     const stage = document.getElementById("stage");
     App.room.renderRoom(stage, world, {});
     App.pet.mount(stage.querySelector(".pethost"), world);
@@ -36,34 +36,66 @@ App.gamescreen = (function () {
     if (bed) bed.disabled = !App.interactions.canSleep(world);
   }
 
+  function setActive(act) {
+    container.querySelectorAll(".actions button").forEach(b =>
+      b.classList.toggle("on", b.dataset.act === act));
+  }
+  function closeTray() {
+    const panel = document.getElementById("panel");
+    panel.innerHTML = ""; panel.hidden = true;
+    setActive(null);
+  }
+  function flash(act) {
+    const b = container.querySelector('[data-act="' + act + '"]');
+    if (!b) return;
+    b.classList.add("on");
+    setTimeout(() => b.classList.remove("on"), 450);
+  }
+
   function onAction(act) {
     const panel = document.getElementById("panel");
+    const btn = container.querySelector('[data-act="' + act + '"]');
+    const instant = act === "bed" || act === "fact";
+
+    // re-tapping the open action collapses its tray
+    if (!instant && btn && btn.classList.contains("on")) { closeTray(); return; }
+
+    if (instant) {
+      closeTray();
+      flash(act);
+      if (act === "bed") {
+        const r = App.interactions.putToBed(world);
+        if (r.ok) { persist(); refresh(); App.pet.speak(pick(App.content.bedtime)); }
+      } else {
+        const f = App.facts.tellSomething(world);
+        App.pet.speak(f.text, 6000); persist();
+      }
+      return;
+    }
+
+    setActive(act);
+    panel.hidden = false;
     panel.innerHTML = "";
+
     if (act === "feed") {
-      panel.innerHTML = App.interactions.FOODS.map(f =>
-        '<button data-food="' + f + '">' + f + '</button>').join("");
+      panel.innerHTML = '<h3>Feed</h3><div class="opts">' + App.interactions.FOODS.map(f =>
+        '<button data-food="' + f + '">' + f + '</button>').join("") + '</div>';
       panel.querySelectorAll("[data-food]").forEach(b => b.addEventListener("click", () => {
-        App.interactions.feed(world, b.dataset.food); persist(); refresh(); panel.innerHTML = "";
+        App.interactions.feed(world, b.dataset.food); persist(); refresh(); closeTray();
       }));
-    } else if (act === "bed") {
-      const r = App.interactions.putToBed(world);
-      if (r.ok) { persist(); refresh(); }
     } else if (act === "hide") {
       hideRound = App.interactions.newHideRound(world);
-      panel.innerHTML = '<p>Find me!</p>' + hideRound.spots.map(i =>
-        '<button data-spot="' + i + '">spot ' + (i + 1) + '</button>').join("");
+      panel.innerHTML = '<h3>Hide &amp; Seek</h3><p>Find me!</p><div class="opts">' + hideRound.spots.map(i =>
+        '<button data-spot="' + i + '">spot ' + (i + 1) + '</button>').join("") + '</div>';
       panel.querySelectorAll("[data-spot]").forEach(b => b.addEventListener("click", () => {
         const res = App.interactions.guessSpot(hideRound, world, +b.dataset.spot);
-        if (res.found) { persist(); refresh(); panel.innerHTML = "<p>Yay! You found me!</p>"; }
+        if (res.found) { persist(); refresh(); panel.innerHTML = '<h3>Hide &amp; Seek</h3><p>Yay! You found me!</p>'; }
         else { b.disabled = true; }
       }));
     } else if (act === "decorate") {
       renderShop(panel);
     } else if (act === "learn") {
       renderLearnMenu(panel);
-    } else if (act === "fact") {
-      const f = App.facts.tellSomething(world);
-      App.pet.speak(f.text, 6000); persist();
     }
   }
 

@@ -7,6 +7,12 @@ App.content = (function () {
     "Yay, it's you! Let's have fun."
   ];
 
+  const bedtime = [
+    "Night night!",
+    "Sleep time. Sweet dreams.",
+    "Snuggling in... goodnight!"
+  ];
+
   const affirmations = [
     "Making mistakes means your brain is stretching!",
     "You tried something tricky. That's real bravery.",
@@ -122,5 +128,5 @@ App.content = (function () {
     return { ok: true, value };
   }
 
-  return { greetings, affirmations, moodLines, facts, spellingLists, RUDE_WORDS, validateName };
+  return { greetings, bedtime, affirmations, moodLines, facts, spellingLists, RUDE_WORDS, validateName };
 })();
