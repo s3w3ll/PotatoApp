@@ -2,7 +2,14 @@ window.App = window.App || {};
 App.gamescreen = (function () {
   let container = null, world = null, hideRound = null, hideMisses = 0;
   let inBedroom = false, tucked = false;
+  let lastCritical = [], lastNudgeAt = 0;
   const roundHistory = { math: [], spell: [] };
+  // Spoken when a need bottoms out at 0 — a gentle "here's how to fix it".
+  const CRITICAL_LINES = {
+    hunger: "My tummy is so empty! Tap 🍎 Feed to help me.",
+    energy: "I can barely keep my eyes open… tap 💤 Bed to tuck me in.",
+    fun: "I'm so bored! Tap 🙈 Hide & Seek and play with me."
+  };
   // hiding-spot anchor points: left% across the floor, bottom% = circle's
   // resting bottom edge above the floor. A gentle arc, all circles fully visible.
   const SPOT_ARC = [
@@ -31,7 +38,8 @@ App.gamescreen = (function () {
     const stage = document.getElementById("stage");
     App.room.renderRoom(stage, world, {});
     App.pet.mount(stage.querySelector(".pethost"), world);
-    App.state.tickNeeds(world, Date.now());
+    // one-time catch-up for time the app was closed — the gentle offline rate
+    App.state.tickNeeds(world, Date.now(), { offline: true });
     el.querySelectorAll(".actions button").forEach(b =>
       b.addEventListener("click", () => onAction(b.dataset.act)));
     App.pet.speak(pick(App.content.greetings));
@@ -44,9 +52,24 @@ App.gamescreen = (function () {
   function refresh() {
     document.getElementById("stars").textContent = "★ " + world.stars;
     renderMeters();
+    nudgeIfCritical();
     App.pet.render(App.state.deriveMood(world));
     const bed = container.querySelector('[data-act="bed"]');
     if (bed) bed.disabled = !App.interactions.canSleep(world);
+  }
+
+  // When a need hits 0, tell the kid how to help — once on the way in, then
+  // no more than every 2 minutes while it's still empty. Clears on recovery.
+  function nudgeIfCritical() {
+    const crit = App.state.criticalNeeds(world);
+    const now = Date.now();
+    const newly = crit.some(k => lastCritical.indexOf(k) === -1);
+    lastCritical = crit;
+    if (!crit.length) return;
+    if (newly || now - lastNudgeAt > 120000) {
+      App.pet.speak(CRITICAL_LINES[crit[0]]);
+      lastNudgeAt = now;
+    }
   }
 
   function renderMeters() {
@@ -158,6 +181,7 @@ App.gamescreen = (function () {
     const layer = el.parentElement;
     const res = App.interactions.guessSpot(hideRound, world, spot);
     if (res.found) {
+      App.interactions.spendEnergy(world, App.interactions.HIDE_ENERGY_COST);
       persist(); refresh();
       popSpot(el, () => {
         layer.querySelectorAll(".spot").forEach(s => popSpot(s));
@@ -353,6 +377,7 @@ App.gamescreen = (function () {
       const gained = App.games.scoreRound(correct, best);
       world.stars += gained;
       world.learn.game.bestStreak = Math.max(world.learn.game.bestStreak, best);
+      App.interactions.spendEnergy(world, App.interactions.LEARN_ENERGY_COST);
       persist(); refresh();
       roundHistory[kind].push({ correct: correct, total: round.questions.length });
       const offer = App.games.shouldOfferLevelUp(roundHistory[kind]);

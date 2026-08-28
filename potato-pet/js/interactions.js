@@ -3,6 +3,16 @@ App.interactions = (function () {
   const FOODS = ["apple", "cookie", "carrot", "fish", "cake"];
   const SPOT_COUNT = 5;
   const clamp100 = v => Math.min(100, v);
+  const clampNeed = v => Math.max(0, Math.min(100, v));
+
+  // Energy a completed round of each activity costs the pet. Playing makes it
+  // tired, which is what makes Bedtime reachable within a single session.
+  const HIDE_ENERGY_COST = 12;
+  const LEARN_ENERGY_COST = 10;
+
+  function spendEnergy(world, n) {
+    world.pet.needs.energy = clampNeed(world.pet.needs.energy - n);
+  }
 
   function happyLine() {
     const lines = App.content.moodLines.happy;
@@ -43,5 +53,8 @@ App.interactions = (function () {
     return { found: false, starsGained: 0, funGained: 0 };
   }
 
-  return { FOODS, SPOT_COUNT, feed, canSleep, putToBed, newHideRound, guessSpot };
+  return {
+    FOODS, SPOT_COUNT, HIDE_ENERGY_COST, LEARN_ENERGY_COST,
+    feed, canSleep, putToBed, spendEnergy, newHideRound, guessSpot
+  };
 })();

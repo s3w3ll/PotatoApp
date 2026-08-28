@@ -9,6 +9,24 @@ window.__pushTests(function interactionsTests() {
   w.pet.needs.hunger = 90; App.interactions.feed(w, "cake");
   assertEq("feed caps at 100", w.pet.needs.hunger, 100);
 
+  // feeding is hunger recovery only — it must not cost energy
+  w = mk();
+  App.interactions.feed(w, "apple");
+  assertEq("feed leaves energy untouched", w.pet.needs.energy, 50);
+
+  // playing tires the pet out: spendEnergy drains energy, clamped to [0,100]
+  w = mk();
+  App.interactions.spendEnergy(w, App.interactions.HIDE_ENERGY_COST);
+  assertEq("Hide & Seek round costs energy",
+    w.pet.needs.energy, 50 - App.interactions.HIDE_ENERGY_COST);
+  App.interactions.spendEnergy(w, App.interactions.LEARN_ENERGY_COST);
+  assertEq("Learn round costs energy too",
+    w.pet.needs.energy, 50 - App.interactions.HIDE_ENERGY_COST - App.interactions.LEARN_ENERGY_COST);
+  assert("Hide & Learn costs are positive",
+    App.interactions.HIDE_ENERGY_COST > 0 && App.interactions.LEARN_ENERGY_COST > 0);
+  w.pet.needs.energy = 5; App.interactions.spendEnergy(w, 40);
+  assertEq("spendEnergy floors at 0", w.pet.needs.energy, 0);
+
   w = mk();
   assertEq("canSleep when tired", App.interactions.canSleep(w), true);
   w.pet.needs.energy = 90;

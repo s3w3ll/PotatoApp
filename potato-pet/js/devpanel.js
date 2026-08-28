@@ -10,7 +10,8 @@ App.devpanel = (function () {
       b.style.font = "11px monospace"; b.style.padding = "2px 4px";
       b.addEventListener("click", fn); p.appendChild(b);
     };
-    const bump = () => { App.state.tickNeeds(world, Date.now()); App.gamescreen.refresh(); App.save.set(world); };
+    // the "skip" buttons simulate time away, so decay at the offline rate
+    const bump = () => { App.state.tickNeeds(world, Date.now(), { offline: true }); App.gamescreen.refresh(); App.save.set(world); };
     btn("skip 1 day",  () => { world.pet.lastTick -= 86400000; bump(); });
     btn("skip 1 week", () => { world.pet.lastTick -= 7 * 86400000; bump(); });
     btn("+100 stars",  () => { world.stars += 100; App.gamescreen.refresh(); App.save.set(world); });
