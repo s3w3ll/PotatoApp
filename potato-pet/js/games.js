@@ -67,7 +67,8 @@ App.games = (function () {
 
   function makeSpellingQuestion(level, rand) {
     const list = App.content.spellingLists[level];
-    const word = App.rng.pick(rand, list);
+    const entry = App.rng.pick(rand, list);
+    const word = entry.word;
     const opts = new Set([word]);
     let guard = 0;
     while (opts.size < 4 && guard++ < 200) opts.add(misspell(word, rand));
@@ -78,7 +79,7 @@ App.games = (function () {
       if (!opts.has(cand)) opts.add(cand);
       k++;
     }
-    return { word, options: shuffle([...opts], rand) };
+    return { word, clue: entry.clue, options: shuffle([...opts], rand) };
   }
 
   function runRound(kind, level, rand) {

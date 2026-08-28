@@ -14,8 +14,15 @@ window.__pushTests(function contentTests() {
   [1,2,3].forEach(lvl => {
     const list = c.spellingLists[lvl];
     assert("spelling L" + lvl + " >= 12", list && list.length >= 12);
-    assertEq("spelling L" + lvl + " no dupes", list.length, new Set(list).size);
-    assert("spelling L" + lvl + " lowercase", list.every(w => w === w.toLowerCase()));
+    const words = list.map(e => e.word);
+    assertEq("spelling L" + lvl + " no dupes", words.length, new Set(words).size);
+    assert("spelling L" + lvl + " lowercase words", words.every(w => w === w.toLowerCase()));
+    assert("spelling L" + lvl + " every entry has a clue",
+      list.every(e => typeof e.clue === "string" && e.clue.length > 0));
+    assert("spelling L" + lvl + " clue never contains its word",
+      list.every(e => !e.clue.toLowerCase().includes(e.word.toLowerCase())));
+    if (lvl === 3) assert("spelling L3 clues are fill-in-the-blank",
+      list.every(e => e.clue.includes("___")));
   });
 
   assertEq("name ok", c.validateName("  Shelly "), { ok: true, value: "Shelly" });

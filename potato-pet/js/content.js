@@ -103,18 +103,52 @@ App.content = (function () {
     { id: 45, text: "Cheetahs can't roar, they purr and meow like housecats.", topic: "world" }
   ];
 
+  // Each entry is { word, clue }. The clue is what gets read aloud and shown —
+  // never the word itself. Levels 1-2 are concrete things, so their clues are
+  // "what / where / who" riddles. Level 3 words are abstract, so their clues are
+  // fill-in-the-blank sentences with ___ where the word belongs.
   const spellingLists = {
     1: [
-      "cat", "dog", "sun", "tree", "book", "milk",
-      "jump", "rain", "fish", "hand", "frog", "cake"
+      { word: "cat",  clue: "What pet says meow and likes to chase mice?" },
+      { word: "dog",  clue: "What pet says woof and loves to fetch a ball?" },
+      { word: "sun",  clue: "What is bright and yellow and warms us up in the sky by day?" },
+      { word: "tree", clue: "What tall plant has a trunk, branches and leaves?" },
+      { word: "book", clue: "What do you read that is full of pages and words?" },
+      { word: "milk", clue: "What white drink comes from a cow?" },
+      { word: "jump", clue: "What do you do when you bend your knees and push off the ground?" },
+      { word: "rain", clue: "What falls from grey clouds and makes puddles?" },
+      { word: "fish", clue: "What animal swims with fins and breathes under water?" },
+      { word: "hand", clue: "What part of your body has five fingers?" },
+      { word: "frog", clue: "What green animal hops and says ribbit?" },
+      { word: "cake", clue: "What sweet treat do you eat on your birthday with candles on top?" }
     ],
     2: [
-      "planet", "dragon", "garden", "pencil", "window", "yellow",
-      "friend", "school", "bridge", "orange", "rocket", "silver"
+      { word: "planet", clue: "What do we call a big round world that circles the sun, like Earth or Mars?" },
+      { word: "dragon", clue: "What make-believe creature has wings and breathes fire?" },
+      { word: "garden", clue: "Where do people grow flowers and vegetables outside?" },
+      { word: "pencil", clue: "What do you write with that has grey lead and an eraser?" },
+      { word: "window", clue: "What glass opening in a wall do you look out of?" },
+      { word: "yellow", clue: "What colour are bananas and lemons?" },
+      { word: "friend", clue: "Who is someone you like to play with and care about?" },
+      { word: "school", clue: "Where do children go on weekdays to learn?" },
+      { word: "bridge", clue: "What do you build to cross over a river?" },
+      { word: "orange", clue: "What round fruit is also the name of a colour?" },
+      { word: "rocket", clue: "What machine blasts off with fire and flies into space?" },
+      { word: "silver", clue: "What shiny grey colour are many coins and spoons?" }
     ],
     3: [
-      "because", "through", "different", "favourite", "tomorrow", "separate",
-      "sentence", "important", "beautiful", "dangerous", "calendar", "necessary"
+      { word: "because",   clue: "I stayed inside ___ it was raining." },
+      { word: "through",   clue: "The train went ___ the long dark tunnel." },
+      { word: "different", clue: "My shoes match, but our two coats are ___." },
+      { word: "favourite", clue: "Ice cream is my ___ dessert of all." },
+      { word: "tomorrow",  clue: "Today is Monday, so ___ is Tuesday." },
+      { word: "separate",  clue: "Please ___ the red blocks from the blue ones." },
+      { word: "sentence",  clue: "Start every ___ with a capital letter." },
+      { word: "important", clue: "Drinking water is ___ for staying healthy." },
+      { word: "beautiful", clue: "The sunset over the sea was so ___." },
+      { word: "dangerous", clue: "Playing with fire is very ___." },
+      { word: "calendar",  clue: "I checked the ___ to find the date of the party." },
+      { word: "necessary", clue: "A warm coat is ___ when the weather is cold." }
     ]
   };
 

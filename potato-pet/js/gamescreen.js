@@ -333,14 +333,14 @@ App.gamescreen = (function () {
     const next = () => {
       if (i >= round.questions.length) return finish();
       const q = round.questions[i];
-      const prompt = kind === "math" ? q.prompt : "Which spelling is right?";
+      const prompt = kind === "math" ? q.prompt : q.clue;
       const opts = q.options;
       const answer = kind === "math" ? q.answer : q.word;
       panel.innerHTML = '<p>Question ' + (i + 1) + ' / ' + round.questions.length + '</p><h3>' + prompt + '</h3>' +
-        (kind === "spell" ? '<p><em>(listen)</em></p>' : '') +
+        (kind === "spell" ? '<p><em>Pick the correct spelling.</em></p>' : '') +
         opts.map(o => '<button data-opt="' + o + '">' + o + '</button>').join("");
       if (kind === "spell" && window.speechSynthesis) {
-        try { speechSynthesis.speak(new SpeechSynthesisUtterance(q.word)); } catch (_) {}
+        try { speechSynthesis.speak(new SpeechSynthesisUtterance(q.clue)); } catch (_) {}
       }
       panel.querySelectorAll("[data-opt]").forEach(b => b.addEventListener("click", () => {
         const ok = String(b.dataset.opt) === String(answer);

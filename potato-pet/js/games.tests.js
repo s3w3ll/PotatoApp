@@ -21,7 +21,11 @@ window.__pushTests(function gamesTests() {
         q.options.filter(o => o === q.word).length === 1);
       assert("spell L"+level+" options unique", new Set(q.options).size === 4);
       assert("spell L"+level+" word is real",
-        App.content.spellingLists[level].includes(q.word));
+        App.content.spellingLists[level].some(e => e.word === q.word));
+      assert("spell L"+level+" has clue",
+        typeof q.clue === "string" && q.clue.length > 0);
+      assert("spell L"+level+" clue omits the answer",
+        !q.clue.toLowerCase().includes(q.word.toLowerCase()));
     }
   }
 
