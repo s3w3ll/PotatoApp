@@ -1,7 +1,12 @@
 window.App = window.App || {};
 App.gamescreen = (function () {
-  let container = null, world = null, hideRound = null;
+  let container = null, world = null, hideRound = null, hideMisses = 0;
   const roundHistory = { math: [], spell: [] };
+  // hiding-spot anchor points: left% across the floor, bottom% = circle's
+  // resting bottom edge above the floor. A gentle arc, all circles fully visible.
+  const SPOT_ARC = [
+    { l: 8, b: 4 }, { l: 29, b: 12 }, { l: 50, b: 17 }, { l: 71, b: 12 }, { l: 92, b: 4 }
+  ];
 
   function boot(el, w) {
     container = el; world = w;
@@ -41,9 +46,84 @@ App.gamescreen = (function () {
       b.classList.toggle("on", b.dataset.act === act));
   }
   function closeTray() {
+    endHideRound();
     const panel = document.getElementById("panel");
     panel.innerHTML = ""; panel.hidden = true;
     setActive(null);
+  }
+
+  // ---- Hide & Seek ----
+  function endHideRound() {
+    const layer = document.querySelector("#stage .room .hidelayer");
+    if (layer) layer.remove();
+    App.pet.home();
+  }
+
+  function hidePromptHTML() {
+    return '<h3>Hide &amp; Seek</h3><p>Tap where I\'m hiding!</p>' +
+      '<p class="giggles">giggles heard: ' + hideMisses + '</p>';
+  }
+
+  function popSpot(el, after) {
+    if (!el) { if (after) after(); return; }
+    el.style.pointerEvents = "none";
+    el.classList.add("pop");
+    setTimeout(() => { el.remove(); if (after) after(); }, 260);
+  }
+
+  function onSpotClick(spot, el) {
+    const layer = el.parentElement;
+    const res = App.interactions.guessSpot(hideRound, world, spot);
+    if (res.found) {
+      persist(); refresh();
+      popSpot(el, () => {
+        layer.querySelectorAll(".spot").forEach(s => popSpot(s));
+        setTimeout(() => {
+          endHideRound();
+          const panel = document.getElementById("panel");
+          panel.hidden = false;
+          panel.innerHTML = '<h3>Hide &amp; Seek</h3><p>You found me! <strong>+★4</strong></p>' +
+            '<p><button id="hideagain">Play again</button></p>';
+          panel.querySelector("#hideagain").addEventListener("click", startHideRound);
+        }, 300);
+      });
+      return;
+    }
+    hideMisses++;
+    document.getElementById("panel").innerHTML = hidePromptHTML();
+    popSpot(el, () => {
+      const left = layer.querySelectorAll(".spot");
+      if (left.length === 1) setTimeout(() => onSpotClick(+left[0].dataset.spot, left[0]), 350);
+    });
+  }
+
+  function startHideRound() {
+    endHideRound();
+    hideRound = App.interactions.newHideRound(world);
+    hideMisses = 0;
+    const room = document.querySelector("#stage .room");
+    const layer = document.createElement("div");
+    layer.className = "hidelayer";
+    layer.innerHTML = hideRound.spots.map(i => {
+      const p = SPOT_ARC[i] || SPOT_ARC[0];
+      return '<button class="spot s' + i + '" data-spot="' + i +
+        '" style="left:' + p.l + '%;bottom:' + p.b + '%"></button>';
+    }).join("");
+    room.appendChild(layer);
+    // Line the pet's feet up with the circle's bottom edge; the circle is
+    // taller than the pet, so its top curve covers the pet's head. z-order
+    // (.pethost z3 < .hidelayer z4) keeps the circle painted in front.
+    const hp = SPOT_ARC[hideRound.hidingSpot] || SPOT_ARC[0];
+    App.pet.place(hp.l, hp.b);
+    // Flush layout so the .in transition animates from the off-screen start
+    // state. rAF would be cleaner but never fires while the tab is backgrounded.
+    void layer.offsetWidth;
+    layer.querySelectorAll(".spot").forEach(s => s.classList.add("in"));
+    layer.querySelectorAll(".spot").forEach(b =>
+      b.addEventListener("click", () => onSpotClick(+b.dataset.spot, b)));
+    const panel = document.getElementById("panel");
+    panel.hidden = false;
+    panel.innerHTML = hidePromptHTML();
   }
   function flash(act) {
     const b = container.querySelector('[data-act="' + act + '"]');
@@ -59,6 +139,9 @@ App.gamescreen = (function () {
 
     // re-tapping the open action collapses its tray
     if (!instant && btn && btn.classList.contains("on")) { closeTray(); return; }
+
+    // leaving Hide & Seek for anything else tears down its board
+    if (act !== "hide") endHideRound();
 
     if (instant) {
       closeTray();
@@ -84,14 +167,7 @@ App.gamescreen = (function () {
         App.interactions.feed(world, b.dataset.food); persist(); refresh(); closeTray();
       }));
     } else if (act === "hide") {
-      hideRound = App.interactions.newHideRound(world);
-      panel.innerHTML = '<h3>Hide &amp; Seek</h3><p>Find me!</p><div class="opts">' + hideRound.spots.map(i =>
-        '<button data-spot="' + i + '">spot ' + (i + 1) + '</button>').join("") + '</div>';
-      panel.querySelectorAll("[data-spot]").forEach(b => b.addEventListener("click", () => {
-        const res = App.interactions.guessSpot(hideRound, world, +b.dataset.spot);
-        if (res.found) { persist(); refresh(); panel.innerHTML = '<h3>Hide &amp; Seek</h3><p>Yay! You found me!</p>'; }
-        else { b.disabled = true; }
-      }));
+      startHideRound();
     } else if (act === "decorate") {
       renderShop(panel);
     } else if (act === "learn") {

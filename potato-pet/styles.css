@@ -79,6 +79,24 @@ button:disabled { opacity: .45; cursor: default; }
   display: grid; grid-template-columns: repeat(12, 1fr); grid-template-rows: repeat(8, 1fr);
 }
 .gridlayer[hidden] { display: none; }
+.hidelayer { position: absolute; inset: 0; z-index: 4; }
+.spot {
+  position: absolute; width: 66px; height: 66px; padding: 0;
+  border-radius: 50%; border: 3px solid rgba(0,0,0,.18); cursor: pointer;
+  box-shadow: 0 6px 0 rgba(0,0,0,.18), inset 0 6px 10px rgba(255,255,255,.35);
+  /* bottom:b% is the circle's real bottom edge — no Y translate at rest, so it
+     sits flat on the floor. Start state slides up from 46px below + faded. */
+  transform: translate(-50%, 46px); opacity: 0;
+  transition: transform .28s ease, opacity .28s ease;
+}
+.spot.in  { transform: translate(-50%, 0); opacity: 1; }
+.spot.pop { transform: translate(-50%, 0) scale(.15); opacity: 0; }
+.spot.s0 { background: #e5566b; }
+.spot.s1 { background: #5b9be0; }
+.spot.s2 { background: #5fbf6a; }
+.spot.s3 { background: #f0b03c; }
+.spot.s4 { background: #b98cd9; }
+.giggles { font-size: 12px; color: #6b5b4b; }
 .gcell {
   padding: 0; border: 1px dashed rgba(255,255,255,.4); border-radius: 0;
   background: rgba(255,255,255,.06);

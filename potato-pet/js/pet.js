@@ -76,6 +76,19 @@ App.pet = (function () {
 
   function playAnim(name, done) { runAnim(name, false, done); }
 
+  // Move the pet to an arbitrary spot in the room (percent of the room box);
+  // home() clears it and lets the stylesheet put the pet back centre-front.
+  function place(leftPct, bottomPct) {
+    if (!el) return;
+    el.style.left = leftPct + "%";
+    el.style.bottom = bottomPct + "%";
+  }
+  function home() {
+    if (!el) return;
+    el.style.left = "";
+    el.style.bottom = "";
+  }
+
   function speak(text, ms) {
     if (!bubble) return;
     bubble.textContent = text;
@@ -84,5 +97,5 @@ App.pet = (function () {
     bubbleTimer = setTimeout(() => { bubble.hidden = true; }, ms || 3500);
   }
 
-  return { mount, render, playAnim, speak };
+  return { mount, render, playAnim, speak, place, home };
 })();

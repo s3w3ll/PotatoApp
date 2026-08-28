@@ -1,7 +1,7 @@
 window.App = window.App || {};
 App.interactions = (function () {
   const FOODS = ["apple", "cookie", "carrot", "fish", "cake"];
-  const SPOT_COUNT = 8;
+  const SPOT_COUNT = 5;
   const clamp100 = v => Math.min(100, v);
 
   function happyLine() {

@@ -21,9 +21,10 @@ window.__pushTests(function interactionsTests() {
 
   w = mk();
   const round = App.interactions.newHideRound(w, 12345);
-  assert("8 spots", round.spots.length === App.interactions.SPOT_COUNT);
-  assert("hidingSpot in range", round.hidingSpot >= 0 && round.hidingSpot < 8);
-  const wrongGuess = (round.hidingSpot + 1) % 8;
+  const N = App.interactions.SPOT_COUNT;
+  assert("spot count matches SPOT_COUNT", round.spots.length === N);
+  assert("hidingSpot in range", round.hidingSpot >= 0 && round.hidingSpot < N);
+  const wrongGuess = (round.hidingSpot + 1) % N;
   const miss = App.interactions.guessSpot(round, w, wrongGuess);
   assertEq("miss has no penalty", miss, { found: false, starsGained: 0, funGained: 0 });
   assertEq("miss doesn't change stars", w.stars, 0);
