@@ -28,6 +28,17 @@ button:disabled { opacity: .45; cursor: default; }
 .pet[data-mood="sleepy"] { opacity: .85; }
 .pet[data-mood="bored"]  { animation: wiggle 1.6s ease-in-out infinite; }
 .pet.anim-peek { opacity: .5; }
+.pet .food {
+  position: absolute; left: 58%; bottom: 0;
+  width: 64%; height: 64%;
+  background-size: contain; background-repeat: no-repeat; background-position: center;
+  transform-origin: center bottom;
+  animation: food-pop .22s ease-out;
+  transition: transform .3s ease, opacity .3s ease;
+  pointer-events: none;
+}
+.pet .food.gone { transform: scale(.15) translateY(8px); opacity: 0; }
+@keyframes food-pop { from { transform: scale(.3); opacity: 0 } to { transform: scale(1); opacity: 1 } }
 .speech {
   position: absolute; top: 8px; max-width: 80%; background: #fff;
   border: 2px solid #3b2f2f; border-radius: 12px; padding: 8px 12px; font-size: 14px;
@@ -74,6 +85,28 @@ button:disabled { opacity: .45; cursor: default; }
   filter: drop-shadow(0 5px 3px rgba(0,0,0,.3));
 }
 .room .speech { left: 50%; transform: translateX(-50%); top: 6px; z-index: 4; }
+
+/* --- bedtime scene --- */
+.bedroom .pet {
+  transition: left .6s ease, bottom .6s ease;
+}
+.bed {
+  position: absolute; left: 38%; bottom: 5%; z-index: 2;
+  width: 48%; aspect-ratio: 3 / 2; transform: translateX(-50%);
+  background-size: contain; background-repeat: no-repeat; background-position: center bottom;
+  image-rendering: pixelated;
+}
+.blanket {
+  position: absolute; left: 68%; bottom: 7%; z-index: 5;
+  width: 20%; aspect-ratio: 1; transform: translateX(-50%);
+  padding: 0; border: none; background-color: transparent; cursor: pointer;
+  background-size: contain; background-repeat: no-repeat; background-position: center;
+  image-rendering: pixelated;
+  transition: left .45s ease, bottom .45s ease, width .45s ease;
+}
+.bedroom.tucked .blanket {
+  left: 38%; bottom: 12%; width: 34%; pointer-events: none;
+}
 .gridlayer {
   position: absolute; inset: 0; z-index: 5;
   display: grid; grid-template-columns: repeat(12, 1fr); grid-template-rows: repeat(8, 1fr);
@@ -120,7 +153,24 @@ button:disabled { opacity: .45; cursor: default; }
 .preview.fallback { width: 140px; height: 140px; border-radius: 24px; }
 .bigcode { font-size: 2rem; letter-spacing: .1em; font-weight: 800; }
 .err { color: #b00020; }
-.hud { display: flex; justify-content: space-between; align-items: center; font-size: 1.3rem; font-weight: 800; }
+.hud {
+  width: min(360px, 100%); margin: 0 auto 2px;
+  display: flex; justify-content: space-between; align-items: center;
+  font-size: 1.3rem; font-weight: 800;
+}
+.meters { display: flex; gap: 8px; align-items: center; }
+.meter { display: flex; align-items: center; gap: 3px; }
+.meter .mi { font-size: 13px; line-height: 1; }
+.mbar {
+  width: 44px; height: 10px; border-radius: 6px; overflow: hidden;
+  background: #e6dcc3; border: 2px solid #3b2f2f;
+}
+.mbar i {
+  display: block; height: 100%; width: 100%; background: #5fbf6a;
+  transition: width .35s ease, background-color .3s ease;
+}
+.meter.low .mbar i { background: #e5566b; animation: meter-pulse 1s ease-in-out infinite; }
+@keyframes meter-pulse { 0%,100% { opacity: 1 } 50% { opacity: .45 } }
 .actions {
   width: min(360px, 100%); margin: 10px auto 0;
   display: flex; gap: 6px;

@@ -27,4 +27,15 @@ window.__pushTests(function stateTests() {
   assertEq("low fun -> bored", App.state.deriveMood(mk({ fun: 40 })), "bored");
   assertEq("tie hunger vs energy -> hungry",
     App.state.deriveMood(mk({ hunger: 30, energy: 30 })), "hungry");
+
+  // needStatus: "low" once a need is below LOW_NEED (40), "ok" at or above
+  assertEq("all healthy -> all ok",
+    App.state.needStatus(mk()), { hunger: "ok", energy: "ok", fun: "ok" });
+  assertEq("hunger 39 -> low",
+    App.state.needStatus(mk({ hunger: 39 })).hunger, "low");
+  assertEq("energy exactly at threshold -> ok",
+    App.state.needStatus(mk({ energy: App.state.LOW_NEED })).energy, "ok");
+  assertEq("two needs low -> both flagged",
+    App.state.needStatus(mk({ energy: 10, fun: 20 })),
+    { hunger: "ok", energy: "low", fun: "low" });
 });

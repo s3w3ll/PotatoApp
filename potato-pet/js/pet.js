@@ -89,6 +89,21 @@ App.pet = (function () {
     el.style.bottom = "";
   }
 
+  // Drop a food sprite in front of the pet for the eat animation, then let it
+  // shrink away. Lives as a child of .pet so it tracks the pet if it moves.
+  function showFood(foodId, ms) {
+    if (!el) return;
+    const life = ms || 1200;
+    const existing = el.querySelector(".food");
+    if (existing) existing.remove();
+    const food = document.createElement("span");
+    food.className = "food pixel";
+    food.style.backgroundImage = "url(assets/sprites/food/" + foodId + ".png)";
+    el.appendChild(food);
+    setTimeout(() => { food.classList.add("gone"); }, Math.max(200, life - 300));
+    setTimeout(() => { food.remove(); }, life);
+  }
+
   function speak(text, ms) {
     if (!bubble) return;
     bubble.textContent = text;
@@ -97,5 +112,5 @@ App.pet = (function () {
     bubbleTimer = setTimeout(() => { bubble.hidden = true; }, ms || 3500);
   }
 
-  return { mount, render, playAnim, speak, place, home };
+  return { mount, render, playAnim, speak, place, home, showFood };
 })();

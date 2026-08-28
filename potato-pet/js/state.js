@@ -4,6 +4,7 @@ App.state = {
   DECAY_PER_DAY: 10,
   NEED_FLOOR: 25,
   HAPPY_THRESHOLD: 60,
+  LOW_NEED: 40,
 
   tickNeeds(world, now) {
     const pet = world.pet;
@@ -24,5 +25,13 @@ App.state = {
     if (lowest === n.hunger) return "hungry";
     if (lowest === n.energy) return "sleepy";
     return "bored";
+  },
+
+  // Per-need flag for the HUD meters: "low" once a need dips below LOW_NEED,
+  // "ok" otherwise. The bar width itself is just the raw 0-100 value.
+  needStatus(world) {
+    const n = world.pet.needs;
+    const tag = v => (v < App.state.LOW_NEED ? "low" : "ok");
+    return { hunger: tag(n.hunger), energy: tag(n.energy), fun: tag(n.fun) };
   }
 };

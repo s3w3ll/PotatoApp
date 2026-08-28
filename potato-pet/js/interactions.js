@@ -12,7 +12,11 @@ App.interactions = (function () {
   function feed(world, foodId) {
     world.pet.needs.hunger = clamp100(world.pet.needs.hunger + 30);
     world.stars += 1;
-    if (App.pet) { App.pet.playAnim("eat"); App.pet.speak(happyLine()); }
+    if (App.pet) {
+      App.pet.showFood(foodId);
+      App.pet.playAnim("eat");
+      App.pet.speak(happyLine());
+    }
     return { starsGained: 1 };
   }
   function canSleep(world) { return world.pet.needs.energy <= 80; }

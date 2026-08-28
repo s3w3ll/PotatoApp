@@ -1,6 +1,7 @@
 window.App = window.App || {};
 App.gamescreen = (function () {
   let container = null, world = null, hideRound = null, hideMisses = 0;
+  let inBedroom = false, tucked = false;
   const roundHistory = { math: [], spell: [] };
   // hiding-spot anchor points: left% across the floor, bottom% = circle's
   // resting bottom edge above the floor. A gentle arc, all circles fully visible.
@@ -11,7 +12,13 @@ App.gamescreen = (function () {
   function boot(el, w) {
     container = el; world = w;
     el.innerHTML =
-      '<header class="hud"><span id="stars">★ 0</span></header>' +
+      '<header class="hud"><span id="stars">★ 0</span>' +
+        '<div class="meters">' +
+          '<div class="meter" data-need="hunger"><span class="mi">🍎</span><span class="mbar"><i></i></span></div>' +
+          '<div class="meter" data-need="energy"><span class="mi">💤</span><span class="mbar"><i></i></span></div>' +
+          '<div class="meter" data-need="fun"><span class="mi">🎮</span><span class="mbar"><i></i></span></div>' +
+        '</div>' +
+      '</header>' +
       '<div id="stage"></div>' +
       '<nav class="actions">' +
         '<button data-act="feed"><span class="ic">🍎</span>Feed</button>' +
@@ -36,9 +43,21 @@ App.gamescreen = (function () {
 
   function refresh() {
     document.getElementById("stars").textContent = "★ " + world.stars;
+    renderMeters();
     App.pet.render(App.state.deriveMood(world));
     const bed = container.querySelector('[data-act="bed"]');
     if (bed) bed.disabled = !App.interactions.canSleep(world);
+  }
+
+  function renderMeters() {
+    const status = App.state.needStatus(world);
+    ["hunger", "energy", "fun"].forEach(k => {
+      const m = container.querySelector('.meter[data-need="' + k + '"]');
+      if (!m) return;
+      const v = Math.max(0, Math.min(100, Math.round(world.pet.needs[k])));
+      m.querySelector("i").style.width = v + "%";
+      m.classList.toggle("low", status[k] === "low");
+    });
   }
 
   function setActive(act) {
@@ -47,9 +66,73 @@ App.gamescreen = (function () {
   }
   function closeTray() {
     endHideRound();
+    if (inBedroom) exitBedroom();
     const panel = document.getElementById("panel");
     panel.innerHTML = ""; panel.hidden = true;
     setActive(null);
+  }
+
+  // ---- Bedtime: a separate bedroom scene ----
+  function enterBedroom() {
+    inBedroom = true; tucked = false;
+    const stage = document.getElementById("stage");
+    stage.innerHTML =
+      '<div class="room bedroom theme-bedroom" data-theme="bedroom"' +
+        ' style="background-image:url(assets/sprites/room/floor-bedroom.png)">' +
+        '<div class="wall" style="background-image:url(assets/sprites/room/wall-bedroom.png)"></div>' +
+        '<div class="bed" style="background-image:url(assets/sprites/deco/bed.png)"></div>' +
+        '<button class="blanket pixel" style="background-image:url(assets/sprites/deco/blanket.png)"></button>' +
+        '<div class="pethost"></div>' +
+      '</div>';
+    App.pet.mount(stage.querySelector(".pethost"), world);
+    // pet comes in from the doorway and walks over to the bed
+    App.pet.place(84, 6);
+    void stage.offsetWidth;
+    App.pet.place(38, 11);
+    // stopPropagation so the tuck tap doesn't also bubble to the wake handler
+    stage.querySelector(".blanket").addEventListener("click", e => { e.stopPropagation(); tuckIn(); });
+    // once tucked the pet sleeps until tapped anywhere else in the room
+    stage.querySelector(".bedroom").addEventListener("click", () => { if (tucked) wakeUp(); });
+    bedroomPanel('<p>Tap the blanket to tuck me in.</p>');
+  }
+
+  function bedroomPanel(inner) {
+    const panel = document.getElementById("panel");
+    panel.hidden = false;
+    panel.innerHTML = '<h3>Bedtime</h3>' + inner + '<p><button id="bedback">Back</button></p>';
+    panel.querySelector("#bedback").addEventListener("click", closeTray);
+  }
+
+  function tuckIn() {
+    if (tucked) return;
+    tucked = true;
+    const bedroom = document.querySelector("#stage .bedroom");
+    if (bedroom) bedroom.classList.add("tucked");
+    App.pet.render("sleepy");
+    App.pet.speak(pick(App.content.bedtime));
+    bedroomPanel('<p>Shhh… tap me to wake me up.</p>');
+  }
+
+  function wakeUp() {
+    if (!tucked) return;
+    tucked = false;
+    const r = App.interactions.putToBed(world);
+    persist();
+    const bedroom = document.querySelector("#stage .bedroom");
+    if (bedroom) bedroom.classList.remove("tucked");
+    refresh();
+    App.pet.playAnim("happy");
+    App.pet.speak("Good morning!");
+    bedroomPanel('<p>All rested! <strong>+★' + (r.ok ? r.starsGained : 0) + '</strong></p>');
+  }
+
+  function exitBedroom() {
+    inBedroom = false; tucked = false;
+    const stage = document.getElementById("stage");
+    stage.innerHTML = "";
+    App.room.renderRoom(stage, world, {});
+    App.pet.mount(stage.querySelector(".pethost"), world);
+    refresh();
   }
 
   // ---- Hide & Seek ----
@@ -135,24 +218,20 @@ App.gamescreen = (function () {
   function onAction(act) {
     const panel = document.getElementById("panel");
     const btn = container.querySelector('[data-act="' + act + '"]');
-    const instant = act === "bed" || act === "fact";
+    const instant = act === "fact";
 
     // re-tapping the open action collapses its tray
     if (!instant && btn && btn.classList.contains("on")) { closeTray(); return; }
 
-    // leaving Hide & Seek for anything else tears down its board
+    // leaving Hide & Seek / the bedroom for anything else tears the scene down
     if (act !== "hide") endHideRound();
+    if (inBedroom && act !== "bed") exitBedroom();
 
     if (instant) {
       closeTray();
       flash(act);
-      if (act === "bed") {
-        const r = App.interactions.putToBed(world);
-        if (r.ok) { persist(); refresh(); App.pet.speak(pick(App.content.bedtime)); }
-      } else {
-        const f = App.facts.tellSomething(world);
-        App.pet.speak(f.text, 6000); persist();
-      }
+      const f = App.facts.tellSomething(world);
+      App.pet.speak(f.text, 6000); persist();
       return;
     }
 
@@ -166,6 +245,13 @@ App.gamescreen = (function () {
       panel.querySelectorAll("[data-food]").forEach(b => b.addEventListener("click", () => {
         App.interactions.feed(world, b.dataset.food); persist(); refresh(); closeTray();
       }));
+    } else if (act === "bed") {
+      if (!App.interactions.canSleep(world)) {
+        panel.innerHTML = '<h3>Bedtime</h3><p>I\'m not sleepy yet!</p>';
+        App.pet.speak("I'm not sleepy yet!");
+      } else {
+        enterBedroom();
+      }
     } else if (act === "hide") {
       startHideRound();
     } else if (act === "decorate") {

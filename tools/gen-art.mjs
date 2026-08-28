@@ -434,7 +434,7 @@ const SPECIES_ART = {
 // ===================================================================
 
 const THEMES = "meadow bedroom space beach".split(" ");
-const DECO = "rug lamp plant poster beanbag bookshelf window ball blocks clock table cushion".split(" ");
+const DECO = "rug lamp plant poster beanbag bookshelf window ball blocks clock table cushion bed blanket".split(" ");
 
 // Build a 32x32 tile from a per-pixel fn, then force column 31 == column 0
 // and row 31 == row 0 so the tile repeats without a visible seam (and the
@@ -724,6 +724,125 @@ const DECO_ART = {
       "................",
     ],
   },
+  bed: {
+    palette: { K: "#6b4a2f", L: "#a9744a", w: "#eef2f7", p: "#9ec7ee", q: "#c98a9a" },
+    pixels: [
+      "................",
+      "KKK.............",
+      "KKK.............",
+      "KKK..........LL.",
+      "KKKpppp......LL.",
+      "KKKppppwwwwwwLL.",
+      "KKKwwwwwwwwwwLL.",
+      "KKKqqqqqqqqqqLL.",
+      "KKKLLLLLLLLLLLL.",
+      "KKKKL......LLLL.",
+      "..LL.......LL...",
+      "................",
+      "................",
+    ],
+  },
+  blanket: {
+    palette: { b: "#9a86c4", B: "#b7a6da", W: "#efe9f7" },
+    pixels: [
+      "................",
+      "................",
+      "...bbbbbbbbbb...",
+      "..bBBBBBBBBBBb..",
+      "..bBBBBBBBBBBb..",
+      "..bWWWWWWWWWWb..",
+      "..bBBBBBBBBBBb..",
+      "..bBBBBBBBBBBb..",
+      "..bWWWWWWWWWWb..",
+      "..bBBBBBBBBBBb..",
+      "..bBBBBBBBBBBb..",
+      "...bbbbbbbbbb...",
+      "................",
+    ],
+  },
+};
+
+// Foods shown briefly in front of the pet during the eat animation.
+const FOOD = "apple cookie carrot fish cake".split(" ");
+
+const FOOD_ART = {
+  apple: {
+    palette: { s: "#7a5230", g: "#5fae5a", r: "#e5484d", R: "#c02c30", h: "#ff9aa0" },
+    pixels: [
+      ".......s........",
+      "......s.g.......",
+      ".....rrrg.......",
+      "....rrrrrrr.....",
+      "...rrrhrrrrr....",
+      "...rrrhrrrrr....",
+      "...Rrrrrrrrr....",
+      "...Rrrrrrrrr....",
+      "....Rrrrrrr.....",
+      "....RRrrrRR.....",
+      ".....RRRR.......",
+      "................",
+    ],
+  },
+  cookie: {
+    palette: { d: "#c98a4a", D: "#a96f34", c: "#5a3a20" },
+    pixels: [
+      "................",
+      "....dddddd......",
+      "...dddddddd.....",
+      "..ddcddddddd....",
+      "..ddddddddcd....",
+      "..dddcdddddd....",
+      "..ddddddcddd....",
+      "...dddddddd.....",
+      "....DDDDDD......",
+      "................",
+    ],
+  },
+  carrot: {
+    palette: { o: "#e08a3c", O: "#c46a20", g: "#5fae5a" },
+    pixels: [
+      ".........g.g....",
+      "........ggggg...",
+      ".......gg.gg....",
+      "......oo.g......",
+      "......ooo.......",
+      ".....ooooO......",
+      ".....oooO.......",
+      "......ooO.......",
+      "......oO........",
+      ".......O........",
+      "................",
+    ],
+  },
+  fish: {
+    palette: { b: "#5b9be0", B: "#3f7fbf", e: "#ffffff", p: "#20364a" },
+    pixels: [
+      "................",
+      "....bbbb....B...",
+      "..bbbbbbbb.BB...",
+      ".bbebbbbbbbBBB..",
+      ".bbpbbbbbbbbBB..",
+      ".bbebbbbbbbBBB..",
+      "..bbbbbbbb.BB...",
+      "....bbbb....B...",
+      "................",
+    ],
+  },
+  cake: {
+    palette: { s: "#f4d6e2", f: "#fff2f7", b: "#c98a6f", r: "#e5484d", y: "#ffd97d" },
+    pixels: [
+      ".......r........",
+      ".......r........",
+      "......yyy.......",
+      "....ffffffff....",
+      "...ffffffffff...",
+      "...fssssssssf...",
+      "...bbbbbbbbbb...",
+      "...bbbbbbbbbb...",
+      "...bbbbbbbbbb...",
+      "................",
+    ],
+  },
 };
 
 // ===================================================================
@@ -801,13 +920,23 @@ function genRooms({ preview }) {
   }
 }
 
+function genFood({ preview }) {
+  if (!preview) fs.mkdirSync(new URL("food/", SPRITE_DIR), { recursive: true });
+  for (const id of FOOD) {
+    const art = FOOD_ART[id];
+    if (preview) { previewGrid("food " + id, pad(scale2x(parseGrid(art)), 32, 32)); continue; }
+    fs.writeFileSync(new URL("food/" + id + ".png", SPRITE_DIR), encodePNG(buildDeco(art)));
+  }
+}
+
 function main() {
   const preview = process.argv.includes("--preview");
   genPets({ preview });
   genRooms({ preview });
+  genFood({ preview });
   if (!preview) {
     fs.writeFileSync(new URL("LICENSE.txt", SPRITE_DIR), LICENSE_TEXT);
-    console.log("gen-art: wrote pet + room + deco sprites + LICENSE.txt");
+    console.log("gen-art: wrote pet + room + deco + food sprites + LICENSE.txt");
   }
 }
 
