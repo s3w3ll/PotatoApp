@@ -6,8 +6,7 @@ App.gamescreen = (function () {
   function boot(el, w) {
     container = el; world = w;
     el.innerHTML =
-      '<header class="hud"><span id="stars">★ 0</span>' +
-      '<button id="rename" title="rename">✏️</button></header>' +
+      '<header class="hud"><span id="stars">★ 0</span></header>' +
       '<div id="stage"></div>' +
       '<nav class="actions">' +
         '<button data-act="feed">Feed</button>' +
@@ -17,11 +16,12 @@ App.gamescreen = (function () {
         '<button data-act="learn">Learn</button>' +
         '<button data-act="fact">Tell me something</button>' +
       '</nav><section id="panel"></section>';
-    App.pet.mount(document.getElementById("stage"), world);
+    const stage = document.getElementById("stage");
+    App.room.renderRoom(stage, world, {});
+    App.pet.mount(stage.querySelector(".pethost"), world);
     App.state.tickNeeds(world, Date.now());
     el.querySelectorAll(".actions button").forEach(b =>
       b.addEventListener("click", () => onAction(b.dataset.act)));
-    el.querySelector("#rename").addEventListener("click", renamePrompt);
     App.pet.speak(pick(App.content.greetings));
     refresh();
   }
@@ -73,9 +73,8 @@ App.gamescreen = (function () {
       return '<button data-buy="' + c.id + '"' + (owned || !App.room.canBuy(world, c.id) ? ' disabled' : '') +
         '><span class="shopicon pixel" style="background-image:url(assets/sprites/deco/' + c.id + '.png)"></span>' +
         c.label + (owned ? ' ✓' : ' — ★' + c.price) + '</button>';
-    }).join("") + '<div id="roomwrap"></div><p><button id="placemode">Place items</button></p>' +
+    }).join("") + '<p><button id="placemode">Place items</button></p>' +
       '<p><button id="backupbtn">Backup</button> <button id="restorebtn">Restore</button></p>';
-    App.room.renderRoom(document.getElementById("roomwrap"), world, {});
     panel.querySelectorAll("[data-buy]").forEach(b => b.addEventListener("click", () => {
       if (App.room.buy(world, b.dataset.buy).ok) { persist(); refresh(); renderShop(panel); }
     }));
@@ -93,22 +92,32 @@ App.gamescreen = (function () {
   }
 
   function enterPlaceMode(panel) {
+    const stage = document.getElementById("stage");
     const owned = world.room.owned.slice();
-    let selected = owned[0];
-    panel.innerHTML = '<h3>Place items</h3><p>Pick an item, then tap a square. Tap a placed item to pick it up.</p>' +
-      owned.map(id => '<button data-sel="' + id + '">' + id + '</button>').join("") +
-      '<div id="roomwrap"></div><p><button id="doneplace">Done</button></p>';
-    const draw = () => App.room.renderRoom(document.getElementById("roomwrap"), world, {
+    let selected = owned[0] || null;
+    panel.innerHTML = '<h3>Place items</h3>' +
+      '<p>Pick an item, then tap a square in the room. Tap a placed item to pick it up.</p>' +
+      '<div class="tray">' + owned.map(id =>
+        '<span class="trayitem pixel' + (id === selected ? ' sel' : '') + '" data-sel="' + id +
+        '" style="background-image:url(assets/sprites/deco/' + id + '.png)" title="' + id + '"></span>').join("") +
+      '</div><p><button id="doneplace">Done</button></p>';
+    const draw = () => App.room.renderRoom(stage, world, {
       placeMode: true,
       onPlaceCell: (x, y) => {
         const hit = world.room.placed.find(p => p.x === x && p.y === y);
         if (hit) App.room.pickUp(world, hit.item);
-        else App.room.place(world, selected, x, y);
+        else if (selected) App.room.place(world, selected, x, y);
         persist(); draw();
       }
     });
-    panel.querySelectorAll("[data-sel]").forEach(b => b.addEventListener("click", () => { selected = b.dataset.sel; }));
-    panel.querySelector("#doneplace").addEventListener("click", () => renderShop(panel));
+    panel.querySelectorAll("[data-sel]").forEach(b => b.addEventListener("click", () => {
+      selected = b.dataset.sel;
+      panel.querySelectorAll(".trayitem").forEach(t => t.classList.toggle("sel", t.dataset.sel === selected));
+    }));
+    panel.querySelector("#doneplace").addEventListener("click", () => {
+      App.room.renderRoom(stage, world, {});
+      renderShop(panel);
+    });
     draw();
   }
 
@@ -164,14 +173,6 @@ App.gamescreen = (function () {
       panel.querySelector("#back").addEventListener("click", () => renderLearnMenu(panel));
     };
     next();
-  }
-
-  function renamePrompt() {
-    const raw = prompt("New name for your pet:");
-    if (raw == null) return;
-    const res = App.content.validateName(raw);
-    if (!res.ok) { alert(res.reason === "length" ? "1 to 16 letters please." : "Let's pick a kinder name."); return; }
-    world.pet.name = res.value; persist();
   }
 
   return { boot, refresh };

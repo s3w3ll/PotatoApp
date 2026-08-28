@@ -18,6 +18,16 @@ App.devpanel = (function () {
       const n = world.pet.needs; const k = ["hunger","energy","fun"][Math.floor(Math.random()*3)];
       n[k] = 26; App.gamescreen.refresh(); App.save.set(world);
     });
+    btn("rename pet", () => {
+      const raw = window.prompt("New name for the pet:", world.pet.name || "");
+      if (raw == null) return;
+      const res = App.content.validateName(raw);
+      if (!res.ok) {
+        alert(res.reason === "length" ? "1 to 16 letters please." : "Let's pick a kinder name.");
+        return;
+      }
+      world.pet.name = res.value; App.save.set(world); App.gamescreen.refresh();
+    });
     btn("show backup string", () => window.prompt("Backup string:", App.backup.exportString(world)));
     btn("corrupt save", () => {
       localStorage.setItem("potato-pet:world:" + world.code, "{broken");

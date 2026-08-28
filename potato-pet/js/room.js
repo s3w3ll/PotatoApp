@@ -37,36 +37,58 @@ App.room = (function () {
   function pickUp(world, id) {
     world.room.placed = world.room.placed.filter(p => p.item !== id);
   }
+  // Presentation only — no buy/place/bounds logic lives here. Builds the room
+  // shell once (framed box + wall band + a .pethost the pet is mounted into by
+  // gamescreen), then refreshes just the decoration layer and the place-mode
+  // grid on every call, so re-rendering during place mode never disturbs the pet.
   function renderRoom(container, world, opts) {
     opts = opts || {};
-    const cells = [];
-    for (let y = 0; y < ROWS; y++) for (let x = 0; x < COLS; x++) {
-      const here = world.room.placed.find(p => p.x === x && p.y === y);
-      let inner = "";
-      if (here) {
-        const c = byId(here.item);
-        const letter = c ? c.label[0] : "?";
-        inner = '<span class="deco pixel" data-item="' + here.item +
-          '" style="background-image:url(assets/sprites/deco/' + here.item + '.png)">' + letter + '</span>';
-      }
-      cells.push('<button class="cell" data-x="' + x + '" data-y="' + y + '">' + inner + '</button>');
+    const theme = world.room.theme;
+    let room = container.querySelector(".room");
+    if (!room || room.dataset.theme !== theme) {
+      container.innerHTML =
+        '<div class="room theme-' + theme + '" data-theme="' + theme + '"' +
+          ' style="background-image:url(assets/sprites/room/floor-' + theme + '.png)">' +
+        '<div class="wall" style="background-image:url(assets/sprites/room/wall-' + theme + '.png)"></div>' +
+        '<div class="decolayer"></div>' +
+        '<div class="gridlayer" hidden></div>' +
+        '<div class="pethost"></div>' +
+        '</div>';
+      room = container.querySelector(".room");
     }
-    container.innerHTML =
-      '<div class="room theme-' + world.room.theme + '"' +
-        ' style="background-image:url(assets/sprites/room/floor-' + world.room.theme + '.png)">' +
-      '<div class="wall" style="background-image:url(assets/sprites/room/wall-' + world.room.theme + '.png)"></div>' +
-      cells.join("") + '</div>';
+
+    room.querySelector(".decolayer").innerHTML = world.room.placed.map(p => {
+      const c = byId(p.item);
+      const letter = c ? c.label[0] : "?";
+      const left = (p.x + 0.5) / COLS * 100;
+      const top = (p.y + 0.5) / ROWS * 100;
+      return '<span class="deco pixel" data-item="' + p.item +
+        '" style="left:' + left + '%;top:' + top + '%;' +
+        'background-image:url(assets/sprites/deco/' + p.item + '.png)">' + letter + '</span>';
+    }).join("");
+
     // deco fallback: if a sprite 404s, reveal the letter
-    container.querySelectorAll(".deco").forEach(sp => {
-      const url = "assets/sprites/deco/" + sp.dataset.item + ".png";
+    room.querySelectorAll(".deco").forEach(sp => {
       const probe = new Image();
       probe.onerror = () => sp.classList.add("noimg");
-      probe.src = url;
+      probe.src = "assets/sprites/deco/" + sp.dataset.item + ".png";
     });
-    if (opts.placeMode && opts.onPlaceCell) {
-      container.querySelectorAll(".cell").forEach(btn => btn.addEventListener("click", () => {
-        opts.onPlaceCell(+btn.dataset.x, +btn.dataset.y);
-      }));
+
+    const grid = room.querySelector(".gridlayer");
+    if (opts.placeMode) {
+      const cells = [];
+      for (let y = 0; y < ROWS; y++) for (let x = 0; x < COLS; x++)
+        cells.push('<button class="gcell" data-x="' + x + '" data-y="' + y + '"></button>');
+      grid.innerHTML = cells.join("");
+      grid.hidden = false;
+      if (opts.onPlaceCell) {
+        grid.querySelectorAll(".gcell").forEach(btn => btn.addEventListener("click", () => {
+          opts.onPlaceCell(+btn.dataset.x, +btn.dataset.y);
+        }));
+      }
+    } else {
+      grid.innerHTML = "";
+      grid.hidden = true;
     }
   }
   return { COLS, ROWS, CATALOG, priceOf, canBuy, buy, cellOccupied, place, pickUp, renderRoom };
