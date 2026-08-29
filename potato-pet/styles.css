@@ -196,6 +196,7 @@ button:disabled { opacity: .45; cursor: default; }
 .bedroom.tucked .blanket {
   left: 38%; bottom: 3%; width: 28%; height: 27%;
   aspect-ratio: auto; background-size: 100% 100%;
+  opacity: 1;                 /* override the dimmed .blanket:disabled state */
   pointer-events: none;
 }
 
