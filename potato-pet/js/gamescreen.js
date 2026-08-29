@@ -37,7 +37,7 @@ App.gamescreen = (function () {
         '<button data-act="fact"><span class="ic">💬</span>Tell me something</button>' +
       '</nav><section id="panel" hidden></section>';
     const stage = document.getElementById("stage");
-    App.room.renderRoom(stage, world, {});
+    showRoom();
     mountPet(stage.querySelector(".pethost"));
     // one-time catch-up for time the app was closed — the gentle offline rate
     App.state.tickNeeds(world, Date.now(), { offline: true });
@@ -177,7 +177,7 @@ App.gamescreen = (function () {
     inBedroom = false; tucked = false;
     const stage = document.getElementById("stage");
     stage.innerHTML = "";
-    App.room.renderRoom(stage, world, {});
+    showRoom();
     mountPet(stage.querySelector(".pethost"));
     refresh();
   }
@@ -318,7 +318,15 @@ App.gamescreen = (function () {
   // Shop = buy things; Arrange = a place-mode grid over the room. Switching to
   // Shop (or leaving Decorate) drops the grid; the pet is never re-mounted.
   function plainRoom() {
-    App.room.renderRoom(document.getElementById("stage"), world, {});
+    showRoom();
+  }
+  function showRoom() {
+    App.room.renderRoom(document.getElementById("stage"), world, { onToggle: handleToggleItem });
+  }
+  function handleToggleItem(id) {
+    if (!App.room.toggleItem(world, id).ok) return;
+    persist();
+    showRoom();
   }
   function exitArrange() {
     if (!inArrange) return;
