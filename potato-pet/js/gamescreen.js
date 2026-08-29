@@ -4,7 +4,7 @@ App.gamescreen = (function () {
   let inBedroom = false, tucked = false, petInBed = false;
   // bedroom anchor points (left%, bottom% of the room box)
   const DOOR_POS = { left: 82, bottom: 6 };
-  const BED_POS = { left: 38, bottom: 26 };
+  const BED_POS = { left: 38, bottom: 22 };
   let inArrange = false;
   let lastCritical = [], lastNudgeAt = 0;
   const roundHistory = { math: [], spell: [] };
@@ -180,7 +180,7 @@ App.gamescreen = (function () {
     const bed = document.querySelector("#stage .bed");
     // the drop counts if the pet landed on the bed by rect, or its target
     // left/bottom (percent of the room) falls within the bed's footprint
-    const byCoords = left >= 16 && left <= 60 && bottom >= 6 && bottom <= 40;
+    const byCoords = left >= 24 && left <= 54 && bottom >= 6 && bottom <= 44;
     if (byCoords || hitOn(pet, bed, 30)) {
       App.pet.place(BED_POS.left, BED_POS.bottom);
       landOnBed();
@@ -249,7 +249,8 @@ App.gamescreen = (function () {
     if (scene) { scene.classList.remove("petready"); scene.classList.add("tucked"); }
     const blanket = document.querySelector("#stage .blanket");
     if (blanket) { blanket.style.left = ""; blanket.style.bottom = ""; blanket.disabled = true; }
-    App.pet.render("sleepy");
+    // pet keeps its normal upright sprite (eyes visible) — the Zzz FX carries
+    // the "asleep" read
     App.pet.speak(pick(App.content.bedtime));
     startSleepFx();
     bedroomPanel('<p>Shhh… tap me to wake me up.</p>');
