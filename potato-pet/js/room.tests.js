@@ -59,4 +59,27 @@ window.__pushTests(function roomTests() {
     App.room.place(w, "rug", 6, 6), { ok: false, reason: "occupied" });
   App.room.pickUp(w, "rug");
   assertEq("pickUp removes placement", w.room.placed.some(p => p.item === "rug"), false);
+
+  // --- interactive item state ---
+  assertEq("isInteractive true for tv", App.room.isInteractive("tv"), true);
+  assertEq("isInteractive false for rug", App.room.isInteractive("rug"), false);
+  assertEq("isInteractive false for unknown", App.room.isInteractive("nope"), false);
+
+  let iw = { stars: 50, room: { theme: "meadow", owned: ["rug"], placed: [] } };
+  App.room.buy(iw, "tv");
+  App.room.place(iw, "tv", 2, 2);
+  assertEq("toggle tv on", App.room.toggleItem(iw, "tv"), { ok: true, on: true });
+  assertEq("placed tv is on", iw.room.placed.find(p => p.item === "tv").on, true);
+  assertEq("toggle tv off", App.room.toggleItem(iw, "tv"), { ok: true, on: false });
+  assertEq("placed tv is off", iw.room.placed.find(p => p.item === "tv").on, false);
+
+  let nw = { stars: 50, room: { theme: "meadow", owned: ["rug"], placed: [] } };
+  assertEq("toggle unplaced item fails", App.room.toggleItem(nw, "tv"), { ok: false });
+  assertEq("toggle did not place anything", nw.room.placed.length, 0);
+
+  let rw = { stars: 0, room: { theme: "meadow", owned: ["rug"], placed: [] } };
+  App.room.place(rw, "rug", 1, 1);
+  assertEq("toggle non-interactive fails", App.room.toggleItem(rw, "rug"), { ok: false });
+  assert("non-interactive placement never gains .on",
+    !("on" in rw.room.placed.find(p => p.item === "rug")));
 });

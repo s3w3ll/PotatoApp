@@ -52,6 +52,14 @@ App.room = (function () {
     world.room.owned.push(id);
     return { ok: true };
   }
+  const isInteractive = id => { const c = byId(id); return c ? c.interactive === true : false; };
+  function toggleItem(world, id) {
+    if (!isInteractive(id)) return { ok: false };
+    const p = world.room.placed.find(pl => pl.item === id);
+    if (!p) return { ok: false };
+    p.on = !p.on;
+    return { ok: true, on: p.on };
+  }
   const cellOccupied = (world, x, y) => world.room.placed.some(p => p.x === x && p.y === y);
   function place(world, id, x, y) {
     if (!world.room.owned.includes(id)) return { ok: false, reason: "not-owned" };
@@ -119,5 +127,6 @@ App.room = (function () {
       grid.hidden = true;
     }
   }
-  return { COLS, ROWS, CATALOG, SETS, priceOf, canBuy, buy, cellOccupied, place, pickUp, renderRoom };
+  return { COLS, ROWS, CATALOG, SETS, priceOf, canBuy, buy, cellOccupied, place, pickUp,
+           isInteractive, toggleItem, renderRoom };
 })();
