@@ -1,9 +1,26 @@
 window.__pushTests(function roomTests() {
   const mk = (stars) => ({ stars: stars, room: { theme: "meadow", owned: ["rug"], placed: [] } });
 
-  assert("catalog >= 10", App.room.CATALOG.length >= 10);
+  assert("catalog >= 24", App.room.CATALOG.length >= 24);
   App.world.STARTERS.forEach(s =>
     assert("starter " + s + " in catalog", App.room.CATALOG.some(c => c.id === s)));
+
+  const ids = App.room.CATALOG.map(c => c.id);
+  assertEq("catalog ids unique", ids.length, new Set(ids).size);
+  const SETS = new Set(["classic", "space", "beach", "garden"]);
+  assert("every item has a known set", App.room.CATALOG.every(c => SETS.has(c.set)));
+  assert("prices are non-negative numbers",
+    App.room.CATALOG.every(c => typeof c.price === "number" && c.price >= 0));
+  assert("has a premium item to save for", App.room.CATALOG.some(c => c.price >= 20));
+  SETS.forEach(s =>
+    assert("set '" + s + "' has items", App.room.CATALOG.some(c => c.set === s)));
+
+  // a brand-new (non-classic) item still buys and places like any other
+  const themed = App.room.CATALOG.find(c => c.set !== "classic");
+  let tw = mk(themed.price);
+  assertEq("buy themed item", App.room.buy(tw, themed.id), { ok: true });
+  assertEq("themed buy deducts stars", tw.stars, 0);
+  assert("themed item now owned", tw.room.owned.includes(themed.id));
 
   const cheap = App.room.CATALOG.find(c => !App.world.STARTERS.includes(c.id));
   let w = mk(cheap.price);

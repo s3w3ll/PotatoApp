@@ -1,19 +1,42 @@
 window.App = window.App || {};
 App.room = (function () {
   const COLS = 12, ROWS = 8;
+  // set: which vibe an item belongs to, shown as a subheading in the shop.
+  // Any item can still go in any room — set is presentation only.
   const CATALOG = [
-    { id: "rug",     label: "Cosy Rug",      price: 0,  kind: "floor" },
-    { id: "lamp",    label: "Warm Lamp",     price: 0,  kind: "furniture" },
-    { id: "plant",   label: "Leafy Plant",   price: 0,  kind: "furniture" },
-    { id: "poster",  label: "Fun Poster",    price: 0,  kind: "wall" },
-    { id: "beanbag", label: "Squishy Beanbag", price: 0, kind: "furniture" },
-    { id: "bookshelf", label: "Bookshelf",   price: 12, kind: "furniture" },
-    { id: "window",  label: "Sunny Window",  price: 15, kind: "wall" },
-    { id: "ball",    label: "Bouncy Ball",   price: 6,  kind: "toy" },
-    { id: "blocks",  label: "Building Blocks", price: 8, kind: "toy" },
-    { id: "clock",   label: "Tick-Tock Clock", price: 10, kind: "wall" },
-    { id: "table",   label: "Little Table",  price: 14, kind: "furniture" },
-    { id: "cushion", label: "Star Cushion",  price: 5,  kind: "floor" }
+    { id: "rug",       label: "Cosy Rug",        price: 0,  kind: "floor",     set: "classic" },
+    { id: "lamp",      label: "Warm Lamp",       price: 0,  kind: "furniture", set: "classic" },
+    { id: "plant",     label: "Leafy Plant",     price: 0,  kind: "furniture", set: "classic" },
+    { id: "poster",    label: "Fun Poster",      price: 0,  kind: "wall",      set: "classic" },
+    { id: "beanbag",   label: "Squishy Beanbag", price: 0,  kind: "furniture", set: "classic" },
+    { id: "bookshelf", label: "Bookshelf",       price: 12, kind: "furniture", set: "classic" },
+    { id: "window",    label: "Sunny Window",    price: 15, kind: "wall",      set: "classic" },
+    { id: "ball",      label: "Bouncy Ball",     price: 6,  kind: "toy",       set: "classic" },
+    { id: "blocks",    label: "Building Blocks", price: 8,  kind: "toy",       set: "classic" },
+    { id: "clock",     label: "Tick-Tock Clock", price: 10, kind: "wall",      set: "classic" },
+    { id: "table",     label: "Little Table",    price: 14, kind: "furniture", set: "classic" },
+    { id: "cushion",   label: "Star Cushion",    price: 5,  kind: "floor",     set: "classic" },
+
+    { id: "starlamp",  label: "Star Lamp",       price: 18, kind: "furniture", set: "space" },
+    { id: "planetrug", label: "Planet Rug",      price: 16, kind: "floor",     set: "space" },
+    { id: "rocket",    label: "Rocket Toy",      price: 22, kind: "toy",       set: "space" },
+    { id: "galaxyposter", label: "Galaxy Poster", price: 12, kind: "wall",     set: "space" },
+
+    { id: "palm",      label: "Palm Plant",      price: 15, kind: "furniture", set: "beach" },
+    { id: "seashell",  label: "Seashell",        price: 6,  kind: "floor",     set: "beach" },
+    { id: "sandcastle", label: "Sandcastle",     price: 10, kind: "toy",       set: "beach" },
+    { id: "surfboard", label: "Surfboard",       price: 20, kind: "furniture", set: "beach" },
+
+    { id: "fairylights", label: "Fairy Lights",  price: 14, kind: "wall",      set: "garden" },
+    { id: "terrarium", label: "Terrarium",       price: 18, kind: "furniture", set: "garden" },
+    { id: "toadstool", label: "Toadstool",       price: 8,  kind: "floor",     set: "garden" },
+    { id: "birdcage",  label: "Birdcage",        price: 24, kind: "furniture", set: "garden" }
+  ];
+  const SETS = [
+    { id: "classic", label: "Classic" },
+    { id: "space",   label: "Space" },
+    { id: "beach",   label: "Beach" },
+    { id: "garden",  label: "Garden" }
   ];
   const byId = id => CATALOG.find(c => c.id === id);
   const priceOf = id => { const c = byId(id); return c ? c.price : Infinity; };
@@ -91,5 +114,5 @@ App.room = (function () {
       grid.hidden = true;
     }
   }
-  return { COLS, ROWS, CATALOG, priceOf, canBuy, buy, cellOccupied, place, pickUp, renderRoom };
+  return { COLS, ROWS, CATALOG, SETS, priceOf, canBuy, buy, cellOccupied, place, pickUp, renderRoom };
 })();

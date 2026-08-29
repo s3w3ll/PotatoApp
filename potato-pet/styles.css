@@ -195,3 +195,22 @@ button:disabled { opacity: .45; cursor: default; }
 #panel h3 { flex-basis: 100%; margin: 0; font-size: 14px; }
 #panel p  { flex-basis: 100%; margin: 2px 0; }
 #panel .opts { flex-basis: 100%; display: flex; flex-wrap: wrap; gap: 8px; }
+
+/* Decorate: Shop / Arrange segmented toggle + its body */
+.segmented {
+  flex-basis: 100%; display: flex; gap: 0;
+  border: 2px solid #3b2f2f; border-radius: 10px; overflow: hidden;
+}
+.segmented button {
+  flex: 1; border: none; border-radius: 0; padding: 8px 6px;
+  font-weight: 800; background: #efe3c8; color: #6b5b4b;
+}
+.segmented button + button { border-left: 2px solid #3b2f2f; }
+.segmented button.on { background: #ffd97d; color: #3b2f2f; }
+.decobody { flex-basis: 100%; display: flex; flex-wrap: wrap; gap: 8px; }
+.decobody .setname {
+  flex-basis: 100%; margin: 6px 0 0; font-size: 12px; font-weight: 800;
+  color: #8a7a63; text-transform: uppercase; letter-spacing: .06em;
+}
+.decobody .utilrow { margin-top: 10px; }
+.decobody .utilrow button { background: #efe3c8; font-size: 12px; padding: 6px 12px; }

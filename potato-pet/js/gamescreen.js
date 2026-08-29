@@ -2,6 +2,7 @@ window.App = window.App || {};
 App.gamescreen = (function () {
   let container = null, world = null, hideRound = null, hideMisses = 0;
   let inBedroom = false, tucked = false;
+  let inArrange = false;
   let lastCritical = [], lastNudgeAt = 0;
   const roundHistory = { math: [], spell: [] };
   // Spoken when a need bottoms out at 0 — a gentle "here's how to fix it".
@@ -90,6 +91,7 @@ App.gamescreen = (function () {
   function closeTray() {
     endHideRound();
     if (inBedroom) exitBedroom();
+    if (inArrange) exitArrange();
     const panel = document.getElementById("panel");
     panel.innerHTML = ""; panel.hidden = true;
     setActive(null);
@@ -247,9 +249,11 @@ App.gamescreen = (function () {
     // re-tapping the open action collapses its tray
     if (!instant && btn && btn.classList.contains("on")) { closeTray(); return; }
 
-    // leaving Hide & Seek / the bedroom for anything else tears the scene down
+    // leaving Hide & Seek / the bedroom / arrange mode for anything else
+    // tears the scene down
     if (act !== "hide") endHideRound();
     if (inBedroom && act !== "bed") exitBedroom();
+    if (inArrange && act !== "decorate") exitArrange();
 
     if (instant) {
       closeTray();
@@ -279,27 +283,59 @@ App.gamescreen = (function () {
     } else if (act === "hide") {
       startHideRound();
     } else if (act === "decorate") {
-      renderShop(panel);
+      renderDecorate(panel, "shop");
     } else if (act === "learn") {
       renderLearnMenu(panel);
     }
   }
 
-  function renderShop(panel) {
-    panel.innerHTML = '<h3>Star Shop</h3>' + App.room.CATALOG.map(c => {
-      const owned = world.room.owned.includes(c.id);
-      return '<button data-buy="' + c.id + '"' + (owned || !App.room.canBuy(world, c.id) ? ' disabled' : '') +
-        '><span class="shopicon pixel" style="background-image:url(assets/sprites/deco/' + c.id + '.png)"></span>' +
-        c.label + (owned ? ' ✓' : ' — ★' + c.price) + '</button>';
-    }).join("") + '<p><button id="placemode">Place items</button></p>' +
-      '<p><button id="backupbtn">Backup</button> <button id="restorebtn">Restore</button></p>';
-    panel.querySelectorAll("[data-buy]").forEach(b => b.addEventListener("click", () => {
-      if (App.room.buy(world, b.dataset.buy).ok) { persist(); refresh(); renderShop(panel); }
+  // Decorate is one panel with a Shop / Arrange segmented toggle at the top.
+  // Shop = buy things; Arrange = a place-mode grid over the room. Switching to
+  // Shop (or leaving Decorate) drops the grid; the pet is never re-mounted.
+  function plainRoom() {
+    App.room.renderRoom(document.getElementById("stage"), world, {});
+  }
+  function exitArrange() {
+    if (!inArrange) return;
+    inArrange = false;
+    plainRoom();
+  }
+
+  function renderDecorate(panel, tab) {
+    tab = tab === "arrange" ? "arrange" : "shop";
+    inArrange = tab === "arrange";
+    panel.hidden = false;
+    panel.innerHTML =
+      '<div class="segmented">' +
+        '<button data-tab="shop"'    + (tab === "shop"    ? ' class="on"' : "") + '>🛍 Shop</button>' +
+        '<button data-tab="arrange"' + (tab === "arrange" ? ' class="on"' : "") + '>🎨 Arrange</button>' +
+      '</div><div class="decobody"></div>';
+    panel.querySelectorAll("[data-tab]").forEach(b =>
+      b.addEventListener("click", () => renderDecorate(panel, b.dataset.tab)));
+    const body = panel.querySelector(".decobody");
+    if (tab === "arrange") fillArrange(body);
+    else { plainRoom(); fillShop(panel, body); }
+  }
+
+  function fillShop(panel, body) {
+    body.innerHTML = App.room.SETS.map(s => {
+      const items = App.room.CATALOG.filter(c => c.set === s.id);
+      if (!items.length) return "";
+      return '<p class="setname">' + s.label + '</p>' + items.map(c => {
+        const owned = world.room.owned.includes(c.id);
+        return '<button data-buy="' + c.id + '"' +
+          (owned || !App.room.canBuy(world, c.id) ? ' disabled' : '') + '>' +
+          '<span class="shopicon pixel" style="background-image:url(assets/sprites/deco/' + c.id + '.png)"></span>' +
+          c.label + (owned ? ' ✓' : ' — ★' + c.price) + '</button>';
+      }).join("");
+    }).join("") +
+      '<p class="utilrow"><button id="backupbtn">Backup</button> <button id="restorebtn">Restore</button></p>';
+    body.querySelectorAll("[data-buy]").forEach(b => b.addEventListener("click", () => {
+      if (App.room.buy(world, b.dataset.buy).ok) { persist(); refresh(); fillShop(panel, body); }
     }));
-    panel.querySelector("#placemode").addEventListener("click", () => enterPlaceMode(panel));
-    panel.querySelector("#backupbtn").addEventListener("click", () =>
+    body.querySelector("#backupbtn").addEventListener("click", () =>
       window.prompt("Copy this and keep it safe:", App.backup.exportString(world)));
-    panel.querySelector("#restorebtn").addEventListener("click", async () => {
+    body.querySelector("#restorebtn").addEventListener("click", async () => {
       const text = window.prompt("Paste your backup string:");
       if (!text) return;
       const res = App.backup.importString(text);
@@ -309,16 +345,16 @@ App.gamescreen = (function () {
     });
   }
 
-  function enterPlaceMode(panel) {
+  function fillArrange(body) {
     const stage = document.getElementById("stage");
     const owned = world.room.owned.slice();
     let selected = owned[0] || null;
-    panel.innerHTML = '<h3>Place items</h3>' +
+    body.innerHTML =
       '<p>Pick an item, then tap a square in the room. Tap a placed item to pick it up.</p>' +
       '<div class="tray">' + owned.map(id =>
         '<span class="trayitem pixel' + (id === selected ? ' sel' : '') + '" data-sel="' + id +
         '" style="background-image:url(assets/sprites/deco/' + id + '.png)" title="' + id + '"></span>').join("") +
-      '</div><p><button id="doneplace">Done</button></p>';
+      '</div>';
     const draw = () => App.room.renderRoom(stage, world, {
       placeMode: true,
       onPlaceCell: (x, y) => {
@@ -328,14 +364,10 @@ App.gamescreen = (function () {
         persist(); draw();
       }
     });
-    panel.querySelectorAll("[data-sel]").forEach(b => b.addEventListener("click", () => {
+    body.querySelectorAll("[data-sel]").forEach(b => b.addEventListener("click", () => {
       selected = b.dataset.sel;
-      panel.querySelectorAll(".trayitem").forEach(t => t.classList.toggle("sel", t.dataset.sel === selected));
+      body.querySelectorAll(".trayitem").forEach(t => t.classList.toggle("sel", t.dataset.sel === selected));
     }));
-    panel.querySelector("#doneplace").addEventListener("click", () => {
-      App.room.renderRoom(stage, world, {});
-      renderShop(panel);
-    });
     draw();
   }
 
