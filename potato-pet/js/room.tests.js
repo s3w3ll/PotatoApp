@@ -1,19 +1,29 @@
 window.__pushTests(function roomTests() {
   const mk = (stars) => ({ stars: stars, room: { theme: "meadow", owned: ["rug"], placed: [] } });
 
-  assert("catalog >= 24", App.room.CATALOG.length >= 24);
+  assert("catalog >= 27", App.room.CATALOG.length >= 27);
   App.world.STARTERS.forEach(s =>
     assert("starter " + s + " in catalog", App.room.CATALOG.some(c => c.id === s)));
 
   const ids = App.room.CATALOG.map(c => c.id);
   assertEq("catalog ids unique", ids.length, new Set(ids).size);
-  const SETS = new Set(["classic", "space", "beach", "garden"]);
+  const SETS = new Set(["classic", "space", "beach", "garden", "gadgets"]);
   assert("every item has a known set", App.room.CATALOG.every(c => SETS.has(c.set)));
   assert("prices are non-negative numbers",
     App.room.CATALOG.every(c => typeof c.price === "number" && c.price >= 0));
   assert("has a premium item to save for", App.room.CATALOG.some(c => c.price >= 20));
   SETS.forEach(s =>
     assert("set '" + s + "' has items", App.room.CATALOG.some(c => c.set === s)));
+
+  // interactive items: at least 3, each with a real effect string, all in "gadgets"
+  const inter = App.room.CATALOG.filter(c => c.interactive === true);
+  assert("has >= 3 interactive items", inter.length >= 3);
+  assert("every interactive item has an effect string",
+    inter.every(c => typeof c.effect === "string" && c.effect.length > 0));
+  assert("interactive items live in the gadgets set",
+    inter.every(c => c.set === "gadgets"));
+  assert("App.room.SETS exposes gadgets",
+    Array.isArray(App.room.SETS) && App.room.SETS.some(s => s.id === "gadgets"));
 
   // a brand-new (non-classic) item still buys and places like any other
   const themed = App.room.CATALOG.find(c => c.set !== "classic");

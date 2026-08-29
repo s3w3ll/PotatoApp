@@ -30,13 +30,18 @@ App.room = (function () {
     { id: "fairylights", label: "Fairy Lights",  price: 14, kind: "wall",      set: "garden" },
     { id: "terrarium", label: "Terrarium",       price: 18, kind: "furniture", set: "garden" },
     { id: "toadstool", label: "Toadstool",       price: 8,  kind: "floor",     set: "garden" },
-    { id: "birdcage",  label: "Birdcage",        price: 24, kind: "furniture", set: "garden" }
+    { id: "birdcage",  label: "Birdcage",        price: 24, kind: "furniture", set: "garden" },
+
+    { id: "tv",       label: "Television", price: 18, kind: "furniture", set: "gadgets", interactive: true, effect: "tv" },
+    { id: "stereo",   label: "Stereo",     price: 16, kind: "furniture", set: "gadgets", interactive: true, effect: "notes" },
+    { id: "lavalamp", label: "Lava Lamp",  price: 20, kind: "furniture", set: "gadgets", interactive: true, effect: "lava" }
   ];
   const SETS = [
     { id: "classic", label: "Classic" },
     { id: "space",   label: "Space" },
     { id: "beach",   label: "Beach" },
-    { id: "garden",  label: "Garden" }
+    { id: "garden",  label: "Garden" },
+    { id: "gadgets", label: "Gadgets" }
   ];
   const byId = id => CATALOG.find(c => c.id === id);
   const priceOf = id => { const c = byId(id); return c ? c.price : Infinity; };
