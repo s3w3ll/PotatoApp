@@ -173,6 +173,8 @@ button:disabled { opacity: .45; cursor: default; }
 .bedroom .pet {
   transition: left .6s ease, bottom .6s ease;
 }
+/* while actually being dragged, track the finger with no lag */
+.bedroom .pet.dragging { transition: none; }
 .bed {
   position: absolute; left: 38%; bottom: 5%; z-index: 2;
   width: 48%; aspect-ratio: 3 / 2; transform: translateX(-50%);
@@ -187,8 +189,72 @@ button:disabled { opacity: .45; cursor: default; }
   image-rendering: pixelated;
   transition: left .45s ease, bottom .45s ease, width .45s ease;
 }
+.blanket:disabled { opacity: .45; pointer-events: none; cursor: default; }
+.blanket.dragging { z-index: 7; transition: none; }
 .bedroom.tucked .blanket {
-  left: 38%; bottom: 12%; width: 34%; pointer-events: none;
+  left: 38%; bottom: 20%; width: 34%; pointer-events: none;
+}
+
+/* Drop targets glow gold while the matching thing is being dragged. */
+.bedroom:has(.pet.dragging) .bed {
+  outline: 3px solid #ffd25e;
+  box-shadow: 0 0 14px 4px rgba(255, 210, 94, .7);
+  border-radius: 8px;
+}
+.bedroom:has(.blanket.dragging) .pet {
+  filter: drop-shadow(0 5px 3px rgba(0,0,0,.3)) drop-shadow(0 0 6px #ffd25e);
+}
+/* Once the pet is settled, pulse the now-usable blanket to draw the eye. */
+.bedroom.petready .blanket:not(:disabled) {
+  animation: blanket-pulse 1.1s ease-in-out infinite;
+}
+@keyframes blanket-pulse {
+  0%,100% { transform: translateX(-50%) scale(1); filter: none; }
+  50%     { transform: translateX(-50%) scale(1.07);
+            filter: drop-shadow(0 0 6px #ffd25e); }
+}
+
+/* --- sleeping FX: floating Zzz + a hopping sheep --- */
+.sleepfx { position: absolute; inset: 0; z-index: 6; pointer-events: none; }
+.sleepfx .zzz {
+  position: absolute; left: 44%; bottom: 46%;
+  font-weight: 700; color: #5a4a6a; text-transform: lowercase;
+}
+.sleepfx .zzz span {
+  position: absolute; left: 0; bottom: 0; opacity: 0;
+  animation: zzz-rise 3s ease-in infinite;
+}
+.sleepfx .zzz span:nth-child(1) { font-size: 14px; animation-delay: 0s; }
+.sleepfx .zzz span:nth-child(2) { font-size: 19px; animation-delay: 1s; }
+.sleepfx .zzz span:nth-child(3) { font-size: 25px; animation-delay: 2s; }
+@keyframes zzz-rise {
+  0%   { opacity: 0; transform: translate(0, 0) rotate(-8deg); }
+  15%  { opacity: 1; }
+  100% { opacity: 0; transform: translate(26px, -46px) rotate(10deg); }
+}
+.sleepfx .sheep {
+  position: absolute; bottom: 14%; left: -50px;
+  width: 42px; aspect-ratio: 16 / 13;
+  background-size: contain; background-repeat: no-repeat; background-position: center;
+  image-rendering: pixelated;
+  animation: sheep-hop 6s linear infinite;
+}
+/* left glides -50px -> 112% across the room; transform does the hops */
+@keyframes sheep-hop {
+  0%   { left: -50px; transform: translateY(0); }
+  100% { left: 112%;  transform: translateY(0); }
+  8%,24%,40%,56%,72%,88%  { transform: translateY(0); }
+  16%,32%,48%,64%,80%     { transform: translateY(-20px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bedroom .pet { transition: none; }
+  .blanket { transition: none; }
+  .bedroom.petready .blanket:not(:disabled) { animation: none; }
+  .sleepfx .sheep { display: none; }
+  .sleepfx .zzz span { animation: none; opacity: 1; }
+  .sleepfx .zzz span:nth-child(1),
+  .sleepfx .zzz span:nth-child(2) { display: none; }
 }
 .gridlayer {
   position: absolute; inset: 0; z-index: 5;

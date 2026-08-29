@@ -4,7 +4,7 @@ App.gamescreen = (function () {
   let inBedroom = false, tucked = false, petInBed = false;
   // bedroom anchor points (left%, bottom% of the room box)
   const DOOR_POS = { left: 82, bottom: 6 };
-  const BED_POS = { left: 38, bottom: 11 };
+  const BED_POS = { left: 38, bottom: 26 };
   let inArrange = false;
   let lastCritical = [], lastNudgeAt = 0;
   const roundHistory = { math: [], spell: [] };
@@ -55,12 +55,16 @@ App.gamescreen = (function () {
   const clampPct = (v, lo, hi) => (v < lo ? lo : v > hi ? hi : v);
 
   // Is element a's centre point sitting over element b (with a slop margin)?
+  function pointOn(x, y, b, margin) {
+    if (!b) return false;
+    const t = b.getBoundingClientRect();
+    return x >= t.left - margin && x <= t.right + margin &&
+           y >= t.top - margin && y <= t.bottom + margin;
+  }
   function hitOn(a, b, margin) {
-    if (!a || !b) return false;
-    const r = a.getBoundingClientRect(), t = b.getBoundingClientRect();
-    const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
-    return cx >= t.left - margin && cx <= t.right + margin &&
-           cy >= t.top - margin && cy <= t.bottom + margin;
+    if (!a) return false;
+    const r = a.getBoundingClientRect();
+    return pointOn(r.left + r.width / 2, r.top + r.height / 2, b, margin);
   }
 
   // ---- direct pet interaction (tap to pet, drag to move) ----
@@ -170,11 +174,14 @@ App.gamescreen = (function () {
 
   // Pet drag released in the bedroom: land it if it's over the bed, else send
   // it back to the doorway with a nudge.
-  function handleBedDrop() {
+  function handleBedDrop(left, bottom) {
     if (tucked) return;
     const pet = document.querySelector("#stage .pet");
     const bed = document.querySelector("#stage .bed");
-    if (hitOn(pet, bed, 30)) {
+    // the drop counts if the pet landed on the bed by rect, or its target
+    // left/bottom (percent of the room) falls within the bed's footprint
+    const byCoords = left >= 16 && left <= 60 && bottom >= 6 && bottom <= 40;
+    if (byCoords || hitOn(pet, bed, 30)) {
       App.pet.place(BED_POS.left, BED_POS.bottom);
       landOnBed();
     } else {
@@ -221,7 +228,9 @@ App.gamescreen = (function () {
       blanket.classList.remove("dragging");
       if (!moved) { tuckIn(); return; }
       const pet = document.querySelector("#stage .pet");
-      if (hitOn(blanket, pet, 26)) {
+      // count it as a hit if the finger let go over the pet, or the blanket
+      // itself came to rest over it
+      if (pointOn(e.clientX, e.clientY, pet, 30) || hitOn(blanket, pet, 26)) {
         tuckIn();
       } else {
         blanket.style.left = ""; blanket.style.bottom = "";
