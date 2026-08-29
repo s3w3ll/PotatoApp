@@ -4,6 +4,10 @@ window.__pushTests(function contentTests() {
   assert("affirmations present", c.affirmations.length >= 12);
   assert("petLines present",
     Array.isArray(c.petLines) && c.petLines.length >= 3 && c.petLines.every(s => s.length > 0));
+  assert("sleepPraise present",
+    Array.isArray(c.sleepPraise) && c.sleepPraise.length >= 2 && c.sleepPraise.every(s => s.length > 0));
+  assert("sleepNudge present",
+    Array.isArray(c.sleepNudge) && c.sleepNudge.length >= 2 && c.sleepNudge.every(s => s.length > 0));
   ["happy","hungry","sleepy","bored"].forEach(m =>
     assert("moodLines." + m + " >= 3", c.moodLines[m] && c.moodLines[m].length >= 3));
 

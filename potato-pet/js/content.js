@@ -13,6 +13,24 @@ App.content = (function () {
     "Snuggling in... goodnight!"
   ];
 
+  // Spoken when the child gets the pet into bed / tucks it (correct drop or tap).
+  const sleepPraise = [
+    "Aah, my cosy bed!",
+    "Perfect. So snuggly.",
+    "Yes! Right where I sleep.",
+    "Mmm, comfy. Thank you!",
+    "Tucked in just right."
+  ];
+
+  // Spoken when the child drops the pet or the blanket in the wrong place.
+  const sleepNudge = [
+    "Oops — my bed's over here!",
+    "Not there, silly. Try the bed.",
+    "Hehe, that's not my bed.",
+    "Almost! The bed, the bed!",
+    "Wrong spot — put it on me!"
+  ];
+
   // Spoken when the child pats the pet.
   const petLines = [
     "Ooh, that's nice!",
@@ -172,5 +190,5 @@ App.content = (function () {
     return { ok: true, value };
   }
 
-  return { greetings, bedtime, petLines, affirmations, moodLines, facts, spellingLists, RUDE_WORDS, validateName };
+  return { greetings, bedtime, petLines, sleepPraise, sleepNudge, affirmations, moodLines, facts, spellingLists, RUDE_WORDS, validateName };
 })();
