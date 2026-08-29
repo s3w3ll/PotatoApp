@@ -191,10 +191,10 @@ button:disabled { opacity: .45; cursor: default; }
 }
 .blanket:disabled { opacity: .45; pointer-events: none; cursor: default; }
 .blanket.dragging { z-index: 7; transition: none; }
-/* tucked: a band across the bed covering the pet's lower ~2/3, cuff at the
-   pet's waist so its face and eyes stay clear above */
+/* tucked: the blanket drapes from the pet's waist all the way down to the
+   foot of the bed, so its face and eyes stay clear above the cuff */
 .bedroom.tucked .blanket {
-  left: 38%; bottom: 19%; width: 28%; height: 15%;
+  left: 38%; bottom: 3%; width: 28%; height: 27%;
   aspect-ratio: auto; background-size: 100% 100%;
   pointer-events: none;
 }
@@ -221,7 +221,7 @@ button:disabled { opacity: .45; cursor: default; }
 /* --- sleeping FX: floating Zzz + a hopping sheep --- */
 .sleepfx { position: absolute; inset: 0; z-index: 6; pointer-events: none; }
 .sleepfx .zzz {
-  position: absolute; left: 42%; bottom: 44%;
+  position: absolute; left: 42%; bottom: 40%;
   font-weight: 700; color: #5a4a6a; text-transform: lowercase;
 }
 .sleepfx .zzz span {

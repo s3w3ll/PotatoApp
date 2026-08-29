@@ -4,7 +4,7 @@ App.gamescreen = (function () {
   let inBedroom = false, tucked = false, petInBed = false;
   // bedroom anchor points (left%, bottom% of the room box)
   const DOOR_POS = { left: 82, bottom: 6 };
-  const BED_POS = { left: 38, bottom: 22 };
+  const BED_POS = { left: 38, bottom: 18 };
   let inArrange = false;
   let lastCritical = [], lastNudgeAt = 0;
   const roundHistory = { math: [], spell: [] };

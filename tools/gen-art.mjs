@@ -749,13 +749,19 @@ const DECO_ART = {
       "...K........K...",
     ],
   },
-  // Landscape blanket with a turned-down cuff along the top. Shown small as
-  // the draggable item, then stretched into a band across the bed when tucked.
+  // Blanket with a turned-down cuff along the top. Authored tall so it nearly
+  // fills its 32x32 canvas (little transparent padding); shown small as the
+  // draggable item, then stretched into a band across the bed when tucked.
   blanket: {
     palette: { b: "#9a86c4", B: "#b7a6da", W: "#efe9f7" },
     pixels: [
       ".WWWWWWWWWWWWWW.",
       ".WWWWWWWWWWWWWW.",
+      ".WWWWWWWWWWWWWW.",
+      ".bbbbbbbbbbbbbb.",
+      ".bBBBBBBBBBBBBb.",
+      ".bbbbbbbbbbbbbb.",
+      ".bBBBBBBBBBBBBb.",
       ".bbbbbbbbbbbbbb.",
       ".bBBBBBBBBBBBBb.",
       ".bbbbbbbbbbbbbb.",
