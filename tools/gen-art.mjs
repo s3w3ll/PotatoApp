@@ -435,7 +435,8 @@ const SPECIES_ART = {
 
 const THEMES = "meadow bedroom space beach".split(" ");
 const DECO = ("rug lamp plant poster beanbag bookshelf window ball blocks clock table cushion bed blanket " +
-  "starlamp planetrug rocket galaxyposter palm seashell sandcastle surfboard fairylights terrarium toadstool birdcage").split(" ");
+  "starlamp planetrug rocket galaxyposter palm seashell sandcastle surfboard fairylights terrarium toadstool birdcage " +
+  "tv stereo lavalamp").split(" ");
 
 // Build a 32x32 tile from a per-pixel fn, then force column 31 == column 0
 // and row 31 == row 0 so the tile repeats without a visible seam (and the
@@ -758,6 +759,54 @@ const DECO_ART = {
       "..bBBBBBBBBBBb..",
       "..bBBBBBBBBBBb..",
       "...bbbbbbbbbb...",
+      "................",
+    ],
+  },
+  tv: {
+    palette: { K: "#33333a", w: "#8fcdec", s: "#5a5a66" },
+    pixels: [
+      "................",
+      "KKKKKKKKKKKKKKKK",
+      "KwwwwwwwwwwwwwwK",
+      "KwwwwwwwwwwwwwwK",
+      "KwwwwwwwwwwwwwwK",
+      "KwwwwwwwwwwwwwwK",
+      "KwwwwwwwwwwwwwwK",
+      "KKKKKKKKKKKKKKKK",
+      "..KK......KK....",
+      "..KK......KK....",
+      "................",
+    ],
+  },
+  stereo: {
+    palette: { K: "#2f2f35", d: "#4a4a52", g: "#9a9aa6", y: "#ffd25e" },
+    pixels: [
+      "................",
+      "KKKKKKKKKKKKKKKK",
+      "KddddddddddddddK",
+      "KdggdddddddggddK",
+      "KgggddddydggggdK",
+      "KgggdddddddgggdK",
+      "KdggdddddddggddK",
+      "KddddddddddddddK",
+      "KKKKKKKKKKKKKKKK",
+      "................",
+      "................",
+    ],
+  },
+  lavalamp: {
+    palette: { K: "#5a4632", g: "#d8b47a", o: "#ff6a3d", O: "#ff8f5c" },
+    pixels: [
+      "................",
+      "......KKKK......",
+      ".....KggggK.....",
+      ".....gooOog.....",
+      ".....goOoog.....",
+      ".....goooog.....",
+      ".....gOooOg.....",
+      ".....goooog.....",
+      ".....KggggK.....",
+      "....KKKKKKKK....",
       "................",
     ],
   },
