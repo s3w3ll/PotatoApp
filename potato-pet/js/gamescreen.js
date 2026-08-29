@@ -1,7 +1,10 @@
 window.App = window.App || {};
 App.gamescreen = (function () {
   let container = null, world = null, hideRound = null, hideMisses = 0;
-  let inBedroom = false, tucked = false;
+  let inBedroom = false, tucked = false, petInBed = false;
+  // bedroom anchor points (left%, bottom% of the room box)
+  const DOOR_POS = { left: 82, bottom: 6 };
+  const BED_POS = { left: 38, bottom: 11 };
   let inArrange = false;
   let lastCritical = [], lastNudgeAt = 0;
   const roundHistory = { math: [], spell: [] };
@@ -49,6 +52,16 @@ App.gamescreen = (function () {
 
   function pick(a) { return a[Math.floor(Math.random() * a.length)]; }
   function persist() { App.save.set(world); }
+  const clampPct = (v, lo, hi) => (v < lo ? lo : v > hi ? hi : v);
+
+  // Is element a's centre point sitting over element b (with a slop margin)?
+  function hitOn(a, b, margin) {
+    if (!a || !b) return false;
+    const r = a.getBoundingClientRect(), t = b.getBoundingClientRect();
+    const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+    return cx >= t.left - margin && cx <= t.right + margin &&
+           cy >= t.top - margin && cy <= t.bottom + margin;
+  }
 
   // ---- direct pet interaction (tap to pet, drag to move) ----
   function handlePet() {
@@ -116,29 +129,29 @@ App.gamescreen = (function () {
     setActive(null);
   }
 
-  // ---- Bedtime: a separate bedroom scene ----
+  // ---- Bedtime: a hands-on bedroom scene ----
+  // The child gets the pet into bed (tap it, or drag it onto the bed), then
+  // drags the blanket over it. Each drop gives spoken + visual feedback. Once
+  // tucked the pet sleeps with floating Zzz and a hopping sheep until tapped.
   function enterBedroom() {
-    inBedroom = true; tucked = false;
+    inBedroom = true; tucked = false; petInBed = false;
     const stage = document.getElementById("stage");
     stage.innerHTML =
       '<div class="room bedroom theme-bedroom" data-theme="bedroom"' +
         ' style="background-image:url(assets/sprites/room/floor-bedroom.png)">' +
         '<div class="wall" style="background-image:url(assets/sprites/room/wall-bedroom.png)"></div>' +
         '<div class="bed" style="background-image:url(assets/sprites/deco/bed.png)"></div>' +
-        '<button class="blanket pixel" style="background-image:url(assets/sprites/deco/blanket.png)"></button>' +
+        '<button class="blanket pixel" disabled style="background-image:url(assets/sprites/deco/blanket.png)"></button>' +
         '<div class="pethost"></div>' +
       '</div>';
-    // tap-to-pet works in the bedroom, but no drag (the scene owns the layout)
-    App.pet.mount(stage.querySelector(".pethost"), world, { onPet: handlePet });
-    // pet comes in from the doorway and walks over to the bed
-    App.pet.place(84, 6);
-    void stage.offsetWidth;
-    App.pet.place(38, 11);
-    // stopPropagation so the tuck tap doesn't also bubble to the wake handler
-    stage.querySelector(".blanket").addEventListener("click", e => { e.stopPropagation(); tuckIn(); });
-    // once tucked the pet sleeps until tapped anywhere else in the room
+    // In the bedroom a tap sends the pet to the bed and a drag lets the child
+    // carry it there; neither touches world.pet.pos (the scene owns the layout).
+    App.pet.mount(stage.querySelector(".pethost"), world, { onPet: petToBed, onMove: handleBedDrop });
+    App.pet.place(DOOR_POS.left, DOOR_POS.bottom);
+    wireBlanketDrag(stage.querySelector(".blanket"), stage.querySelector(".bedroom"));
+    // tapping anywhere in the room wakes a tucked-in pet
     stage.querySelector(".bedroom").addEventListener("click", () => { if (tucked) wakeUp(); });
-    bedroomPanel('<p>Tap the blanket to tuck me in.</p>');
+    bedroomPanel('<p>Tap me, or drag me onto the bed.</p>');
   }
 
   function bedroomPanel(inner) {
@@ -148,25 +161,116 @@ App.gamescreen = (function () {
     panel.querySelector("#bedback").addEventListener("click", closeTray);
   }
 
-  function tuckIn() {
+  // Pet tapped in the bedroom: it slides itself onto the bed.
+  function petToBed() {
+    if (tucked || petInBed) return;
+    App.pet.place(BED_POS.left, BED_POS.bottom);
+    landOnBed();
+  }
+
+  // Pet drag released in the bedroom: land it if it's over the bed, else send
+  // it back to the doorway with a nudge.
+  function handleBedDrop() {
     if (tucked) return;
+    const pet = document.querySelector("#stage .pet");
+    const bed = document.querySelector("#stage .bed");
+    if (hitOn(pet, bed, 30)) {
+      App.pet.place(BED_POS.left, BED_POS.bottom);
+      landOnBed();
+    } else {
+      App.pet.place(DOOR_POS.left, DOOR_POS.bottom);
+      App.pet.speak(pick(App.content.sleepNudge));
+    }
+  }
+
+  // Pet is now settled on the bed — praise, glow the scene, unlock the blanket.
+  function landOnBed() {
+    if (petInBed) return;
+    petInBed = true;
+    const scene = document.querySelector("#stage .bedroom");
+    if (scene) scene.classList.add("petready");
+    const blanket = document.querySelector("#stage .blanket");
+    if (blanket) blanket.disabled = false;
+    App.pet.speak(pick(App.content.sleepPraise));
+    bedroomPanel('<p>Now drag the blanket over me.</p>');
+  }
+
+  // The blanket is a draggable button: a plain tap tucks; a drag tucks only if
+  // it lands on the pet, otherwise it folds back and the pet gives a hint.
+  function wireBlanketDrag(blanket, scene) {
+    if (!blanket || !scene) return;
+    let sx = 0, sy = 0, moved = false, id = null;
+    blanket.addEventListener("pointerdown", e => {
+      if (blanket.disabled) return;
+      sx = e.clientX; sy = e.clientY; moved = false; id = e.pointerId;
+      try { blanket.setPointerCapture(e.pointerId); } catch (_) {}
+    });
+    blanket.addEventListener("pointermove", e => {
+      if (id !== e.pointerId) return;
+      if (!moved && Math.hypot(e.clientX - sx, e.clientY - sy) < 6) return;
+      moved = true;
+      blanket.classList.add("dragging");
+      const box = scene.getBoundingClientRect();
+      blanket.style.left = clampPct((e.clientX - box.left) / box.width * 100, 6, 94) + "%";
+      blanket.style.bottom = clampPct((box.bottom - e.clientY) / box.height * 100, 2, 62) + "%";
+    });
+    const done = e => {
+      if (id !== e.pointerId) return;
+      id = null;
+      try { blanket.releasePointerCapture(e.pointerId); } catch (_) {}
+      blanket.classList.remove("dragging");
+      if (!moved) { tuckIn(); return; }
+      const pet = document.querySelector("#stage .pet");
+      if (hitOn(blanket, pet, 26)) {
+        tuckIn();
+      } else {
+        blanket.style.left = ""; blanket.style.bottom = "";
+        App.pet.speak(pick(App.content.sleepNudge));
+      }
+    };
+    blanket.addEventListener("pointerup", done);
+    blanket.addEventListener("pointercancel", done);
+  }
+
+  function tuckIn() {
+    if (tucked || !petInBed) return;
     tucked = true;
     App.pet.setInteractive(false);
-    const bedroom = document.querySelector("#stage .bedroom");
-    if (bedroom) bedroom.classList.add("tucked");
+    const scene = document.querySelector("#stage .bedroom");
+    if (scene) { scene.classList.remove("petready"); scene.classList.add("tucked"); }
+    const blanket = document.querySelector("#stage .blanket");
+    if (blanket) { blanket.style.left = ""; blanket.style.bottom = ""; blanket.disabled = true; }
     App.pet.render("sleepy");
     App.pet.speak(pick(App.content.bedtime));
+    startSleepFx();
     bedroomPanel('<p>Shhh… tap me to wake me up.</p>');
+  }
+
+  // Floating Zzz + a sheep hopping past the bed while the pet sleeps.
+  function startSleepFx() {
+    const scene = document.querySelector("#stage .bedroom");
+    if (!scene || scene.querySelector(".sleepfx")) return;
+    const fx = document.createElement("div");
+    fx.className = "sleepfx";
+    fx.innerHTML =
+      '<div class="zzz"><span>z</span><span>z</span><span>z</span></div>' +
+      '<div class="sheep pixel" style="background-image:url(assets/sprites/deco/sheep.png)"></div>';
+    scene.appendChild(fx);
+  }
+  function stopSleepFx() {
+    const fx = document.querySelector("#stage .sleepfx");
+    if (fx) fx.remove();
   }
 
   function wakeUp() {
     if (!tucked) return;
-    tucked = false;
+    tucked = false; petInBed = false;
     App.pet.setInteractive(true);
+    stopSleepFx();
     const r = App.interactions.putToBed(world);
     persist();
-    const bedroom = document.querySelector("#stage .bedroom");
-    if (bedroom) bedroom.classList.remove("tucked");
+    const scene = document.querySelector("#stage .bedroom");
+    if (scene) scene.classList.remove("tucked");
     refresh();
     App.pet.playAnim("happy");
     App.pet.speak("Good morning!");
@@ -174,7 +278,8 @@ App.gamescreen = (function () {
   }
 
   function exitBedroom() {
-    inBedroom = false; tucked = false;
+    inBedroom = false; tucked = false; petInBed = false;
+    stopSleepFx();
     const stage = document.getElementById("stage");
     stage.innerHTML = "";
     showRoom();
