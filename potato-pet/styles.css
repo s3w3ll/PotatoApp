@@ -53,10 +53,25 @@ button:disabled { opacity: .45; cursor: default; }
 }
 .pet .food.gone { transform: scale(.15) translateY(8px); opacity: 0; }
 @keyframes food-pop { from { transform: scale(.3); opacity: 0 } to { transform: scale(1); opacity: 1 } }
+/* Speech bubble: a child of .pet, so it follows the pet around the room.
+   --bub-shift (set by speak()) nudges it back inside the room near an edge;
+   the tail shifts the opposite way so it keeps pointing at the pet. */
 .speech {
-  position: absolute; top: 8px; max-width: 80%; background: #fff;
-  border: 2px solid #3b2f2f; border-radius: 12px; padding: 8px 12px; font-size: 14px;
+  position: absolute; left: 50%; bottom: 100%; margin-bottom: 11px;
+  transform: translateX(-50%) translateX(var(--bub-shift, 0px));
+  width: max-content; max-width: 150px;
+  background: #fff; border: 2px solid #3b2f2f; border-radius: 12px;
+  padding: 6px 10px; font-size: 13px; line-height: 1.25; text-align: center;
+  color: #3b2f2f; z-index: 6; pointer-events: none;
+  filter: drop-shadow(0 3px 4px rgba(0,0,0,.18));
 }
+.speech::before, .speech::after {
+  content: ""; position: absolute; top: 100%; left: 50%;
+  width: 0; height: 0; border: 8px solid transparent;
+  transform: translateX(-50%) translateX(calc(-1 * var(--bub-shift, 0px)));
+}
+.speech::before { border-top-color: #3b2f2f; }                 /* tail outline */
+.speech::after  { border-top-color: #fff; border-width: 6px; margin-top: -2px; } /* tail fill */
 .speech[hidden] { display: none; }
 @keyframes bob { 0%,100% { transform: translateY(0) } 50% { transform: translateY(-10px) } }
 @keyframes wiggle { 0%,100% { transform: rotate(-4deg) } 50% { transform: rotate(4deg) } }
@@ -94,11 +109,11 @@ button:disabled { opacity: .45; cursor: default; }
 .deco.noimg { color: #3b2f2f; }
 .pethost { position: absolute; inset: 0; z-index: 3; pointer-events: none; }
 .room .stage { position: static; height: 100%; display: block; }
+/* .speech now lives inside .pet and tracks it — no room-level anchor needed */
 .room .pet {
   position: absolute; left: 50%; bottom: 5%; transform: translateX(-50%);
   filter: drop-shadow(0 5px 3px rgba(0,0,0,.3));
 }
-.room .speech { left: 50%; transform: translateX(-50%); top: 6px; z-index: 4; }
 
 /* --- bedtime scene --- */
 .bedroom .pet {

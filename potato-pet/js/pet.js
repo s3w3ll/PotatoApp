@@ -46,11 +46,12 @@ App.pet = (function () {
     stop();
     container.innerHTML =
       '<div class="stage">' +
-        '<div class="speech" hidden></div>' +
-        '<div class="pet pixel" data-mood="happy"></div>' +
+        '<div class="pet pixel" data-mood="happy">' +
+          '<div class="speech" hidden></div>' +
+        '</div>' +
       '</div>';
     el = container.querySelector(".pet");
-    bubble = container.querySelector(".speech");
+    bubble = el.querySelector(".speech");
     wireInput();
     const m = App.sprites.manifest[world.pet.species] || { placeholderColor: "#999" };
     const g = sheetGeom(world.pet.species);
@@ -167,7 +168,19 @@ App.pet = (function () {
   function speak(text, ms) {
     if (!bubble) return;
     bubble.textContent = text;
+    bubble.style.setProperty("--bub-shift", "0px");
     bubble.hidden = false;
+    // keep the bubble inside the room; if the centred bubble would clip past
+    // an edge, nudge it in (the tail shifts back the other way in CSS).
+    const room = el && el.closest(".room");
+    if (room) {
+      const b = bubble.getBoundingClientRect();
+      const r = room.getBoundingClientRect();
+      let shift = 0;
+      if (b.left < r.left + 4) shift = (r.left + 4) - b.left;
+      else if (b.right > r.right - 4) shift = (r.right - 4) - b.right;
+      if (shift) bubble.style.setProperty("--bub-shift", Math.round(shift) + "px");
+    }
     clearTimeout(bubbleTimer);
     bubbleTimer = setTimeout(() => { bubble.hidden = true; }, ms || 3500);
   }
