@@ -1,6 +1,13 @@
 window.App = window.App || {};
 App.room = (function () {
   const COLS = 12, ROWS = 8;
+  // effect name -> the animated overlay drawn inside a switched-on interactive
+  // item. Animation itself is pure CSS (see styles.css .fx-*).
+  const FX = {
+    tv:    '<span class="fx fx-tv"></span>',
+    notes: '<span class="fx fx-notes"><i>♪</i><i>♫</i><i>♪</i></span>',
+    lava:  '<span class="fx fx-lava"><i></i><i></i><i></i></span>',
+  };
   // set: which vibe an item belongs to, shown as a subheading in the shop.
   // Any item can still go in any room — set is presentation only.
   const CATALOG = [
@@ -93,14 +100,20 @@ App.room = (function () {
       room = container.querySelector(".room");
     }
 
-    room.querySelector(".decolayer").innerHTML = world.room.placed.map(p => {
+    const decolayer = room.querySelector(".decolayer");
+    decolayer.innerHTML = world.room.placed.map(p => {
       const c = byId(p.item);
       const letter = c ? c.label[0] : "?";
       const left = (p.x + 0.5) / COLS * 100;
       const top = (p.y + 0.5) / ROWS * 100;
-      return '<span class="deco pixel" data-item="' + p.item +
-        '" style="left:' + left + '%;top:' + top + '%;' +
-        'background-image:url(assets/sprites/deco/' + p.item + '.png)">' + letter + '</span>';
+      const on = isInteractive(p.item) && !!p.on;
+      const cls = "deco pixel" +
+        (isInteractive(p.item) ? " deco-toggle " + (p.on ? "on" : "off") : "");
+      const fx = on ? (FX[c.effect] || "") : "";
+      return '<span class="' + cls + '" data-item="' + p.item + '"' +
+        (isInteractive(p.item) ? ' data-interactive' : '') +
+        ' style="left:' + left + '%;top:' + top + '%;' +
+        'background-image:url(assets/sprites/deco/' + p.item + '.png)">' + letter + fx + '</span>';
     }).join("");
 
     // deco fallback: if a sprite 404s, reveal the letter
@@ -109,6 +122,13 @@ App.room = (function () {
       probe.onerror = () => sp.classList.add("noimg");
       probe.src = "assets/sprites/deco/" + sp.dataset.item + ".png";
     });
+
+    if (!opts.placeMode && typeof opts.onToggle === "function") {
+      decolayer.querySelectorAll("[data-interactive]").forEach(span => {
+        span.style.pointerEvents = "auto";
+        span.addEventListener("click", () => opts.onToggle(span.dataset.item));
+      });
+    }
 
     const grid = room.querySelector(".gridlayer");
     if (opts.placeMode) {
