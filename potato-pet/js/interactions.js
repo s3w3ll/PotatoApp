@@ -29,6 +29,22 @@ App.interactions = (function () {
     }
     return { starsGained: 1 };
   }
+  // Petting the pet earns a star, but only PET_STARS_PER_DAY of them per day
+  // so it stays a bit of affection, not a way around the games.
+  const PET_STARS_PER_DAY = 5;
+  function petPet(world, now) {
+    now = now == null ? Date.now() : now;
+    const day = Math.floor(now / 86400000);
+    const log = world.pet.petLog && world.pet.petLog.day === day
+      ? world.pet.petLog
+      : { day: day, count: 0 };
+    world.pet.petLog = log;
+    if (log.count >= PET_STARS_PER_DAY) return { starsGained: 0, capped: true };
+    log.count += 1;
+    world.stars += 1;
+    return { starsGained: 1, capped: false };
+  }
+
   function canSleep(world) { return world.pet.needs.energy <= 80; }
   function putToBed(world) {
     if (!canSleep(world)) return { ok: false, starsGained: 0 };
@@ -54,7 +70,7 @@ App.interactions = (function () {
   }
 
   return {
-    FOODS, SPOT_COUNT, HIDE_ENERGY_COST, LEARN_ENERGY_COST,
-    feed, canSleep, putToBed, spendEnergy, newHideRound, guessSpot
+    FOODS, SPOT_COUNT, HIDE_ENERGY_COST, LEARN_ENERGY_COST, PET_STARS_PER_DAY,
+    feed, petPet, canSleep, putToBed, spendEnergy, newHideRound, guessSpot
   };
 })();

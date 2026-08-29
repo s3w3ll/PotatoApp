@@ -23,11 +23,25 @@ button:disabled { opacity: .45; cursor: default; }
 .pet {
   width: 96px; height: 96px;
   background-repeat: no-repeat;
+  pointer-events: auto;      /* the .pethost layer is none — only the sprite is hittable */
+  cursor: grab;
+  touch-action: none;        /* let a touch-drag move the pet instead of scrolling */
 }
 .pet.fallback { border-radius: 24px; animation: bob 1.6s ease-in-out infinite; }
 .pet[data-mood="sleepy"] { opacity: .85; }
 .pet[data-mood="bored"]  { animation: wiggle 1.6s ease-in-out infinite; }
 .pet.anim-peek { opacity: .5; }
+.pet.nodrag { pointer-events: none; cursor: default; }
+.pet.dragging { cursor: grabbing; transition: none !important; }
+.pet .heart {
+  position: absolute; left: 50%; top: -8px;
+  font-size: 20px; pointer-events: none;
+  animation: heart-float .9s ease-out forwards;
+}
+@keyframes heart-float {
+  from { opacity: 1; transform: translate(-50%, 0) scale(.6); }
+  to   { opacity: 0; transform: translate(-50%, -34px) scale(1.1); }
+}
 .pet .food {
   position: absolute; left: 58%; bottom: 0;
   width: 64%; height: 64%;

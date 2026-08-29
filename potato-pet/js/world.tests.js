@@ -13,6 +13,8 @@ window.__pushTests(function worldTests() {
   assert("placed starts empty", a.room.placed.length === 0);
   assertEq("needs full", a.pet.needs, { hunger: 100, energy: 100, fun: 100 });
   assertEq("stars zero", a.stars, 0);
+  assertEq("pet has no saved position yet", a.pet.pos, null);
+  assertEq("pet has no pet-log yet", a.pet.petLog, null);
   assertEq("name empty", a.pet.name, "");
   assertEq("version matches save", a.version, App.save.CURRENT_VERSION);
   assertEq("factsSeen empty", a.learn.factsSeen, []);

@@ -13,6 +13,16 @@ App.content = (function () {
     "Snuggling in... goodnight!"
   ];
 
+  // Spoken when the child pats the pet.
+  const petLines = [
+    "Ooh, that's nice!",
+    "Hehe, that tickles!",
+    "More pats, please!",
+    "You give the best cuddles.",
+    "I feel so loved!",
+    "Mmm, cosy."
+  ];
+
   const affirmations = [
     "Making mistakes means your brain is stretching!",
     "You tried something tricky. That's real bravery.",
@@ -162,5 +172,5 @@ App.content = (function () {
     return { ok: true, value };
   }
 
-  return { greetings, bedtime, affirmations, moodLines, facts, spellingLists, RUDE_WORDS, validateName };
+  return { greetings, bedtime, petLines, affirmations, moodLines, facts, spellingLists, RUDE_WORDS, validateName };
 })();

@@ -2,6 +2,8 @@ window.__pushTests(function contentTests() {
   const c = App.content;
   assert("greetings present", Array.isArray(c.greetings) && c.greetings.length >= 4);
   assert("affirmations present", c.affirmations.length >= 12);
+  assert("petLines present",
+    Array.isArray(c.petLines) && c.petLines.length >= 3 && c.petLines.every(s => s.length > 0));
   ["happy","hungry","sleepy","bored"].forEach(m =>
     assert("moodLines." + m + " >= 3", c.moodLines[m] && c.moodLines[m].length >= 3));
 

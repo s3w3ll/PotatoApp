@@ -37,6 +37,21 @@ window.__pushTests(function interactionsTests() {
   assertEq("putToBed refills energy", w.pet.needs.energy, 100);
   assertEq("putToBed result", rb, { ok: true, starsGained: 1 });
 
+  // petting: +1 star per pat, capped per day, cap resets the next day
+  w = mk();
+  const DAY = 86400000, t0 = 5 * DAY + 1000;
+  const first = App.interactions.petPet(w, t0);
+  assertEq("first pat gives a star", first, { starsGained: 1, capped: false });
+  assertEq("pat star landed", w.stars, 1);
+  let capped;
+  for (let i = 0; i < 20; i++) capped = App.interactions.petPet(w, t0 + i * 1000);
+  assertEq("pats stop giving stars once capped", capped.starsGained, 0);
+  assert("capped flag set", capped.capped === true);
+  assertEq("daily cap honoured", w.stars, App.interactions.PET_STARS_PER_DAY);
+  const nextDay = App.interactions.petPet(w, t0 + DAY);
+  assertEq("cap resets next day", nextDay, { starsGained: 1, capped: false });
+  assertEq("star after reset", w.stars, App.interactions.PET_STARS_PER_DAY + 1);
+
   w = mk();
   const round = App.interactions.newHideRound(w, 12345);
   const N = App.interactions.SPOT_COUNT;

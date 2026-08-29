@@ -38,7 +38,7 @@ App.gamescreen = (function () {
       '</nav><section id="panel" hidden></section>';
     const stage = document.getElementById("stage");
     App.room.renderRoom(stage, world, {});
-    App.pet.mount(stage.querySelector(".pethost"), world);
+    mountPet(stage.querySelector(".pethost"));
     // one-time catch-up for time the app was closed — the gentle offline rate
     App.state.tickNeeds(world, Date.now(), { offline: true });
     el.querySelectorAll(".actions button").forEach(b =>
@@ -49,6 +49,25 @@ App.gamescreen = (function () {
 
   function pick(a) { return a[Math.floor(Math.random() * a.length)]; }
   function persist() { App.save.set(world); }
+
+  // ---- direct pet interaction (tap to pet, drag to move) ----
+  function handlePet() {
+    const r = App.interactions.petPet(world);
+    App.pet.heart();
+    App.pet.playAnim("happy");
+    App.pet.speak(pick(App.content.petLines));
+    if (r.starsGained) { persist(); refresh(); }
+  }
+  function handlePetMoved(left, bottom) {
+    world.pet.pos = { left: left, bottom: bottom };
+    persist();
+  }
+  // Mount the pet into a room host with interaction wired, and drop it back
+  // wherever the child last left it.
+  function mountPet(host) {
+    App.pet.mount(host, world, { onPet: handlePet, onMove: handlePetMoved });
+    if (world.pet.pos) App.pet.place(world.pet.pos.left, world.pet.pos.bottom);
+  }
 
   function refresh() {
     document.getElementById("stars").textContent = "★ " + world.stars;
@@ -109,7 +128,8 @@ App.gamescreen = (function () {
         '<button class="blanket pixel" style="background-image:url(assets/sprites/deco/blanket.png)"></button>' +
         '<div class="pethost"></div>' +
       '</div>';
-    App.pet.mount(stage.querySelector(".pethost"), world);
+    // tap-to-pet works in the bedroom, but no drag (the scene owns the layout)
+    App.pet.mount(stage.querySelector(".pethost"), world, { onPet: handlePet });
     // pet comes in from the doorway and walks over to the bed
     App.pet.place(84, 6);
     void stage.offsetWidth;
@@ -131,6 +151,7 @@ App.gamescreen = (function () {
   function tuckIn() {
     if (tucked) return;
     tucked = true;
+    App.pet.setInteractive(false);
     const bedroom = document.querySelector("#stage .bedroom");
     if (bedroom) bedroom.classList.add("tucked");
     App.pet.render("sleepy");
@@ -141,6 +162,7 @@ App.gamescreen = (function () {
   function wakeUp() {
     if (!tucked) return;
     tucked = false;
+    App.pet.setInteractive(true);
     const r = App.interactions.putToBed(world);
     persist();
     const bedroom = document.querySelector("#stage .bedroom");
@@ -156,7 +178,7 @@ App.gamescreen = (function () {
     const stage = document.getElementById("stage");
     stage.innerHTML = "";
     App.room.renderRoom(stage, world, {});
-    App.pet.mount(stage.querySelector(".pethost"), world);
+    mountPet(stage.querySelector(".pethost"));
     refresh();
   }
 
@@ -164,7 +186,9 @@ App.gamescreen = (function () {
   function endHideRound() {
     const layer = document.querySelector("#stage .room .hidelayer");
     if (layer) layer.remove();
-    App.pet.home();
+    App.pet.setInteractive(true);
+    if (world.pet.pos) App.pet.place(world.pet.pos.left, world.pet.pos.bottom);
+    else App.pet.home();
   }
 
   function hidePromptHTML() {
@@ -208,6 +232,7 @@ App.gamescreen = (function () {
 
   function startHideRound() {
     endHideRound();
+    App.pet.setInteractive(false);   // no petting/dragging while the pet is hiding
     hideRound = App.interactions.newHideRound(world);
     hideMisses = 0;
     const room = document.querySelector("#stage .room");

@@ -3,6 +3,8 @@ App.pet = (function () {
   const SCALE = 1.5;
   let el = null, bubble = null, bubbleTimer = null, world = null;
   let stepTimer = null, ambient = "idle", col = 0;
+  let onPetCb = null, onMoveCb = null, interactive = true;
+  const clamp = (v, lo, hi) => (v < lo ? lo : v > hi ? hi : v);
 
   function sheetGeom(species) {
     const m = App.sprites.manifest[species] || { cell: 32, cols: 2, rows: 4 };
@@ -35,7 +37,11 @@ App.pet = (function () {
 
   function runAmbient() { runAnim(ambient, true); }
 
-  function mount(container, w) {
+  function mount(container, w, opts) {
+    opts = opts || {};
+    onPetCb = opts.onPet || null;
+    onMoveCb = opts.onMove || null;
+    interactive = true;
     world = w;
     stop();
     container.innerHTML =
@@ -45,6 +51,7 @@ App.pet = (function () {
       '</div>';
     el = container.querySelector(".pet");
     bubble = container.querySelector(".speech");
+    wireInput();
     const m = App.sprites.manifest[world.pet.species] || { placeholderColor: "#999" };
     const g = sheetGeom(world.pet.species);
     el.style.width = el.style.height = (m.cell ? m.cell * SCALE : 96) + "px";
@@ -89,6 +96,59 @@ App.pet = (function () {
     el.style.bottom = "";
   }
 
+  // Direct pet interaction: a tap fires opts.onPet, a drag past a few pixels
+  // moves the sprite around the floor and fires opts.onMove(left, bottom) on
+  // release. setInteractive(false) suspends both (Hide & Seek, tucked in bed).
+  function setInteractive(on) {
+    interactive = !!on;
+    if (el) el.classList.toggle("nodrag", !on);
+  }
+
+  function wireInput() {
+    if (!el) return;
+    let startX = 0, startY = 0, moved = false, activeId = null;
+
+    el.addEventListener("pointerdown", e => {
+      if (!interactive) return;
+      startX = e.clientX; startY = e.clientY; moved = false; activeId = e.pointerId;
+      try { el.setPointerCapture(e.pointerId); } catch (_) {}
+    });
+
+    el.addEventListener("pointermove", e => {
+      if (activeId !== e.pointerId || !onMoveCb) return;
+      if (!moved && Math.hypot(e.clientX - startX, e.clientY - startY) < 6) return;
+      moved = true;
+      el.classList.add("dragging");
+      const box = el.parentElement.getBoundingClientRect();
+      el.style.left = clamp((e.clientX - box.left) / box.width * 100, 4, 96) + "%";
+      el.style.bottom = clamp((box.bottom - e.clientY) / box.height * 100, 2, 42) + "%";
+    });
+
+    const finish = e => {
+      if (activeId !== e.pointerId) return;
+      activeId = null;
+      try { el.releasePointerCapture(e.pointerId); } catch (_) {}
+      el.classList.remove("dragging");
+      if (moved) {
+        if (onMoveCb) onMoveCb(parseFloat(el.style.left), parseFloat(el.style.bottom));
+      } else if (interactive && onPetCb) {
+        onPetCb();
+      }
+    };
+    el.addEventListener("pointerup", finish);
+    el.addEventListener("pointercancel", finish);
+  }
+
+  // A little heart that floats up off the pet when it's patted.
+  function heart() {
+    if (!el) return;
+    const h = document.createElement("span");
+    h.className = "heart";
+    h.textContent = "💗";
+    el.appendChild(h);
+    setTimeout(() => h.remove(), 900);
+  }
+
   // Drop a food sprite in front of the pet for the eat animation, then let it
   // shrink away. Lives as a child of .pet so it tracks the pet if it moves.
   function showFood(foodId, ms) {
@@ -112,5 +172,5 @@ App.pet = (function () {
     bubbleTimer = setTimeout(() => { bubble.hidden = true; }, ms || 3500);
   }
 
-  return { mount, render, playAnim, speak, place, home, showFood };
+  return { mount, render, playAnim, speak, place, home, showFood, heart, setInteractive };
 })();

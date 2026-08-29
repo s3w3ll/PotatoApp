@@ -18,7 +18,9 @@ App.world = (function () {
       pet: {
         species, name: "", adoptedAt: now, tint,
         needs: { hunger: 100, energy: 100, fun: 100 },
-        lastTick: now
+        lastTick: now,
+        pos: null,      // { left, bottom } once the child drags the pet somewhere
+        petLog: null    // { day, count } — daily cap on stars from petting
       },
       stars: 0,
       room: { theme, owned: [starter], placed: [] },
