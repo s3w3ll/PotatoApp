@@ -436,7 +436,7 @@ const SPECIES_ART = {
 const THEMES = "meadow bedroom space beach".split(" ");
 const DECO = ("rug lamp plant poster beanbag bookshelf window ball blocks clock table cushion bed blanket " +
   "starlamp planetrug rocket galaxyposter palm seashell sandcastle surfboard fairylights terrarium toadstool birdcage " +
-  "tv stereo lavalamp").split(" ");
+  "tv stereo lavalamp sheep").split(" ");
 
 // Build a 32x32 tile from a per-pixel fn, then force column 31 == column 0
 // and row 31 == row 0 so the tile repeats without a visible seam (and the
@@ -1024,6 +1024,26 @@ const DECO_ART = {
       "...K.K.K.KK.....",
       "...KKKKKKKK.....",
       "....KKKKKK......",
+      "................",
+      "................",
+    ],
+  },
+
+  // --- bedtime scene (counting-sheep bonus) ---
+  sheep: {
+    palette: { w: "#f2f2f2", W: "#ffffff", K: "#3a3a3a" },
+    pixels: [
+      "................",
+      "................",
+      ".......wwww.....",
+      "......wWwwwww...",
+      ".....wwwwwwwww..",
+      "..KKKwwwwwwwwww.",
+      ".KKKKwwwwwwwwww.",
+      "..KK.wwwwwwwwww.",
+      ".....wwwwwwwww..",
+      "......K.K.K.K...",
+      "......K.K.K.K...",
       "................",
       "................",
     ],
